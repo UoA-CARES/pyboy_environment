@@ -14,6 +14,8 @@ class PyboyEnvironment:
         rom_name: str,
         init_name: str,
         act_freq: int,
+        valid_actions: list,
+        release_button: list,
         emulation_speed: int = 0,
         headless: bool = False,
     ) -> None:
@@ -25,23 +27,20 @@ class PyboyEnvironment:
 
         self.combo_actions = 0
 
-        self.valid_actions = []
+        self.valid_actions = valid_actions
 
-        self.release_button = []
+        self.release_button = release_button
 
         self.act_freq = act_freq
 
-        head, hide_window = ["headless", True] if headless else ["SDL2", False]
+        head = "headless" if headless else "SDL2"
         self.pyboy = PyBoy(
             self.rom_path,
-            debugging=False,
-            disable_input=False,
             window_type=head,
-            hide_window=hide_window,
         )
 
         self.prior_game_stats = self._generate_game_stats()
-        self.screen = self.pyboy.botsupport_manager().screen()
+        self.screen = self.pyboy.screen
 
         self.step_count = 0
         self.seed = 0
@@ -50,55 +49,33 @@ class PyboyEnvironment:
 
         self.reset()
 
-    @cached_property
-    def min_action_value(self) -> float:
-        return -1
-
-    @cached_property
-    def max_action_value(self) -> float:
-        return 1
-
-    @cached_property
-    def observation_space(self) -> int:
-        return len(self._stats_to_state(self._generate_game_stats()))
-
-    @cached_property
-    def action_num(self) -> int:
-        return 1
-
     def set_seed(self, seed: int) -> None:
         self.seed = seed
         # There isn't a random element to set that I am aware of...
 
     def reset(self) -> np.ndarray:
-        # restart game, skipping credits and selecting first pokemon
         with open(self.init_path, "rb") as f:
             self.pyboy.load_state(f)
-        return self._stats_to_state(self._generate_game_stats())
+        return self._get_state()
 
     def grab_frame(self, height=240, width=300) -> np.ndarray:
-        frame = self.screen.screen_ndarray()
+        frame = np.array(self.screen.image)
         frame = cv2.resize(frame, (width, height))
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         # Convert to BGR for use with OpenCV
         return frame
 
-    def step(self, action: int) -> tuple:
-        # Actions excluding start
+    def game_area(self) -> np.ndarray:
+        return self.pyboy.game_area()
+
+    def step(self, action) -> tuple:
         self.step_count += 1
 
-        # For test.py: Comment out bins & discrete_action and uncomment following line
-        # discrete_action = action
-        bins = np.linspace(
-            self.min_action_value, self.max_action_value, num=len(self.valid_actions)
-        )
-        discrete_action = int(np.digitize(action, bins)) - 1
+        self._run_action_on_emulator(action)
 
-        self._run_action_on_emulator(discrete_action)
+        state = self._get_state()
 
         current_game_stats = self._generate_game_stats()
-        state = self._stats_to_state(current_game_stats)
-
         reward_stats = self._calculate_reward_stats(current_game_stats)
         reward = self._reward_stats_to_reward(reward_stats)
 
@@ -106,19 +83,33 @@ class PyboyEnvironment:
 
         self.prior_game_stats = current_game_stats
 
-        truncated = self.step_count % 1000 == 0
+        truncated = self.step_count % 200 == 0
 
         return state, reward, done, truncated
 
-    def _run_action_on_emulator(self, action: int) -> None:
-        # press button then release after some steps - enough to move
-        self.pyboy.send_input(self.valid_actions[action])
-        for i in range(self.act_freq):
-            self.pyboy.tick()
-            if i == 8:  # ticks required to carry a "step" in the world
-                self.pyboy.send_input(self.release_button[action])
+    @cached_property
+    def min_action_value(self) -> float:
+        raise NotImplementedError("Override this method in the child class")
 
-    def _stats_to_state(self, game_stats: dict) -> np.ndarray:
+    @cached_property
+    def max_action_value(self) -> float:
+        raise NotImplementedError("Override this method in the child class")
+
+    @cached_property
+    def observation_space(self) -> int:
+        raise NotImplementedError("Override this method in the child class")
+
+    @cached_property
+    def action_num(self) -> int:
+        raise NotImplementedError("Override this method in the child class")
+
+    def sample_action(self) -> np.ndarray:
+        raise NotImplementedError("Override this method in the child class")
+
+    def _get_state(self) -> np.ndarray:
+        raise NotImplementedError("Override this method in the child class")
+
+    def _run_action_on_emulator(self, action) -> None:
         raise NotImplementedError("Override this method in the child class")
 
     def _generate_game_stats(self) -> dict:
@@ -134,7 +125,7 @@ class PyboyEnvironment:
         raise NotImplementedError("Override this method in the child class")
 
     def _read_m(self, addr: int) -> int:
-        return self.pyboy.get_memory_value(addr)
+        return self.pyboy.memory[addr]
 
     def _read_bit(self, addr: int, bit: int) -> bool:
         # add padding so zero will read '0b100000000' instead of '0b0'
@@ -153,38 +144,3 @@ class PyboyEnvironment:
 
     def _read_bcd(self, num: int) -> int:
         return 10 * ((num >> 4) & 0x0F) + (num & 0x0F)
-
-    def _get_sprites(self) -> list:
-        ss = []
-        for i in range(40):  # game boy can only support 40 sprites on screen at a time
-            s = self.pyboy.botsupport_manager().sprite(i)
-            if s.on_screen:
-                ss.append(s)
-        return ss
-
-    # function is a work in progress
-    def game_area(self) -> np.ndarray:
-        # shape = (20, 18)
-        shape = (20, 16)
-        game_area_section = (0, 2) + shape
-
-        xx = game_area_section[0]
-        yy = game_area_section[1]
-        width = game_area_section[2]
-        height = game_area_section[3]
-
-        tilemap_background = self.pyboy.botsupport_manager().tilemap_background()
-        game_area = np.asarray(
-            tilemap_background[xx : xx + width, yy : yy + height], dtype=np.uint32
-        )
-
-        ss = self._get_sprites()
-        for s in ss:
-            _x = (s.x // 8) - xx
-
-            _y = (s.y // 8) - yy
-
-            if 0 <= _y < height and 0 <= _x < width:
-                game_area[_y][_x] = s.tile_identifier
-
-        return game_area

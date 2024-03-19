@@ -4,7 +4,7 @@ import numpy as np
 from pyboy_environment.environments.pokemon import pokemon_constants as pkc
 from pyboy_environment.environments.environment import PyboyEnvironment
 
-from pyboy import WindowEvent
+from pyboy.utils import WindowEvent
 
 
 class PokemonEnvironment(PyboyEnvironment):
