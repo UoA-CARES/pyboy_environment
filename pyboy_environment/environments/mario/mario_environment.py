@@ -1,4 +1,10 @@
-# https://datacrystal.tcrf.net/wiki/Super_Mario_Land/RAM_map
+"""
+The link below has all the ROM memory data for Super Mario Land. 
+It is used to extract the game state for the MarioEnvironment class.
+
+https://datacrystal.tcrf.net/wiki/Super_Mario_Land/RAM_map
+"""
+
 import logging
 from functools import cached_property
 from typing import Dict, List
@@ -19,7 +25,7 @@ class MarioEnvironment(PyboyEnvironment):
     ) -> None:
 
         valid_actions: List[WindowEvent] = [
-            WindowEvent.PRESS_ARROW_DOWN,
+            # WindowEvent.PRESS_ARROW_DOWN,
             WindowEvent.PRESS_ARROW_LEFT,
             WindowEvent.PRESS_ARROW_RIGHT,
             WindowEvent.PRESS_ARROW_UP,
@@ -28,7 +34,7 @@ class MarioEnvironment(PyboyEnvironment):
         ]
 
         release_button: List[WindowEvent] = [
-            WindowEvent.RELEASE_ARROW_DOWN,
+            # WindowEvent.RELEASE_ARROW_DOWN,
             WindowEvent.RELEASE_ARROW_LEFT,
             WindowEvent.RELEASE_ARROW_RIGHT,
             WindowEvent.RELEASE_ARROW_UP,
@@ -121,32 +127,7 @@ class MarioEnvironment(PyboyEnvironment):
         return new_state["lives"] - self.prior_game_stats["lives"]
 
     def _time_reward(self, new_state: Dict[str, int]) -> int:
-        return new_state["time"] - self.prior_game_stats["time"]
-
-    def _score_reward(self, new_state: Dict[str, int]) -> int:
-        if new_state["score"] - self.prior_game_stats["score"] > 0:
-            return 0.5
-        if new_state["score"] - self.prior_game_stats["score"] == 0:
-            return 0
-        return -0.5
-
-    def _powerup_reward(self, new_state: Dict[str, int]) -> int:
-        # Return positive reward for gaining powerup. Negative reward for
-        # losing powerup except for when starman runs out of time
-        if new_state["powerup"] - self.prior_game_stats["powerup"] < 0:
-            if self.prior_game_stats["powerup"] == 3:
-                return 0
-            else:
-                return -1
-        elif new_state["powerup"] - self.prior_game_stats["powerup"] > 0:
-            return 1
-        return 0
-
-    def _coins_reward(self, new_state: Dict[str, int]) -> int:
-        if new_state["coins"] - self.prior_game_stats["coins"] > 0:
-            return 0.2
-        else:
-            return 0
+        return min(0, (new_state["time"] - self.prior_game_stats["time"]) * 10)
 
     def _get_x_position(self):
         # Copied from: https://github.com/lixado/PyBoy-RL/blob/main/AISettings/MarioAISettings.py
