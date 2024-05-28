@@ -115,7 +115,7 @@ class PokemonEnvironment(PyboyEnvironment):
             reward_total += reward
         return reward_total
 
-    def _calculate_reward_stats(self, new_state: Dict[str, any]) -> Dict[str, int]:
+    def _calculate_reward(self, new_state: Dict[str, any]) -> Dict[str, int]:
         return {
             "caught_reward": self._caught_reward(new_state),
             "seen_reward": self._seen_reward(new_state),

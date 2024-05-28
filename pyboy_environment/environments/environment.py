@@ -1,3 +1,4 @@
+from abc import ABCMeta, abstractmethod
 from functools import cached_property
 from pathlib import Path
 
@@ -6,7 +7,7 @@ import numpy as np
 from pyboy import PyBoy
 
 
-class PyboyEnvironment:
+class PyboyEnvironment(metaclass=ABCMeta):
 
     def __init__(
         self,
@@ -33,10 +34,10 @@ class PyboyEnvironment:
 
         self.act_freq = act_freq
 
-        head = "headless" if headless else "SDL2"
+        head = "null" if headless else "SDL2"
         self.pyboy = PyBoy(
             self.rom_path,
-            window_type=head,
+            window=head,
         )
 
         self.prior_game_stats = self._generate_game_stats()
@@ -64,11 +65,11 @@ class PyboyEnvironment:
 
         return self._get_state()
 
-    def grab_frame(self, height=240, width=300) -> np.ndarray:
+    def grab_frame(self, height: int = 240, width: int = 300) -> np.ndarray:
         frame = np.array(self.screen.image)
         frame = cv2.resize(frame, (width, height))
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         # Convert to BGR for use with OpenCV
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
         return frame
 
     def game_area(self) -> np.ndarray:
@@ -82,8 +83,7 @@ class PyboyEnvironment:
         state = self._get_state()
 
         current_game_stats = self._generate_game_stats()
-        reward_stats = self._calculate_reward_stats(current_game_stats)
-        reward = self._reward_stats_to_reward(reward_stats)
+        reward = self._calculate_reward(current_game_stats)
 
         done = self._check_if_done(current_game_stats)
         truncated = self._check_if_truncated(current_game_stats)
@@ -91,46 +91,6 @@ class PyboyEnvironment:
         self.prior_game_stats = current_game_stats
 
         return state, reward, done, truncated
-
-    @cached_property
-    def min_action_value(self) -> float:
-        raise NotImplementedError("Override this method in the child class")
-
-    @cached_property
-    def max_action_value(self) -> float:
-        raise NotImplementedError("Override this method in the child class")
-
-    @cached_property
-    def observation_space(self) -> int:
-        raise NotImplementedError("Override this method in the child class")
-
-    @cached_property
-    def action_num(self) -> int:
-        raise NotImplementedError("Override this method in the child class")
-
-    def sample_action(self) -> np.ndarray:
-        raise NotImplementedError("Override this method in the child class")
-
-    def _get_state(self) -> np.ndarray:
-        raise NotImplementedError("Override this method in the child class")
-
-    def _run_action_on_emulator(self, action) -> None:
-        raise NotImplementedError("Override this method in the child class")
-
-    def _generate_game_stats(self) -> dict:
-        raise NotImplementedError("Override this method in the child class")
-
-    def _reward_stats_to_reward(self, reward_stats: dict) -> float:
-        raise NotImplementedError("Override this method in the child class")
-
-    def _calculate_reward_stats(self, new_state: dict) -> dict:
-        raise NotImplementedError("Override this method in the child class")
-
-    def _check_if_done(self, game_stats: dict) -> bool:
-        raise NotImplementedError("Override this method in the child class")
-
-    def _check_if_truncated(self, game_stats: dict) -> bool:
-        raise NotImplementedError("Override this method in the child class")
 
     def _read_m(self, addr: int) -> int:
         return self.pyboy.memory[addr]
@@ -152,3 +112,51 @@ class PyboyEnvironment:
 
     def _read_bcd(self, num: int) -> int:
         return 10 * ((num >> 4) & 0x0F) + (num & 0x0F)
+
+    @abstractmethod
+    @cached_property
+    def min_action_value(self) -> float:
+        pass
+
+    @abstractmethod
+    @cached_property
+    def max_action_value(self) -> float:
+        pass
+
+    @abstractmethod
+    @cached_property
+    def observation_space(self) -> int:
+        pass
+
+    @abstractmethod
+    @cached_property
+    def action_num(self) -> int:
+        pass
+
+    @abstractmethod
+    def sample_action(self) -> np.ndarray:
+        pass
+
+    @abstractmethod
+    def _get_state(self) -> np.ndarray:
+        pass
+
+    @abstractmethod
+    def _run_action_on_emulator(self, action) -> None:
+        pass
+
+    @abstractmethod
+    def _generate_game_stats(self) -> dict:
+        pass
+
+    @abstractmethod
+    def _calculate_reward(self, new_state: dict) -> float:
+        pass
+
+    @abstractmethod
+    def _check_if_done(self, game_stats: dict) -> bool:
+        pass
+
+    @abstractmethod
+    def _check_if_truncated(self, game_stats: dict) -> bool:
+        pass
