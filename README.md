@@ -25,7 +25,7 @@ Environment running Gameboy games utilising the pyboy wrapper: https://github.co
 ## Mario
 
 ```
-python3 train.py run --gym pyboy --domain mario SACAE
+python3 train.py run --gym pyboy --domain mario --task run SACAE
 ```
 
 <p align="center">
@@ -35,7 +35,7 @@ python3 train.py run --gym pyboy --domain mario SACAE
 ## Pokemon
 
 ```
-python3 train.py run --gym pyboy --domain pokemon SACAE
+python3 train.py run --gym pyboy --domain pokemon --task catch SACAE
 ```
 
 <p align="center">
