@@ -1,10 +1,10 @@
 import logging
 
-logging.basicConfig(level=logging.DEBUG)
-
 import cv2
 
 from pyboy_environment.environments.mario.mario_run import MarioRun
+
+logging.basicConfig(level=logging.DEBUG)
 
 
 def key_to_action(button: int):
