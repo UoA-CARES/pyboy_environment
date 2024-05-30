@@ -22,6 +22,8 @@ python3 train.py run --gym pyboy --task mario TD3
 # Games
 Environment running Gameboy games utilising the pyboy wrapper: https://github.com/UoA-CARES/pyboy_environment 
 
+These games are run through the generalised gymnaisum environment: https://github.com/UoA-CARES/gymnasium_envrionments
+
 ## Mario
 
 ```
