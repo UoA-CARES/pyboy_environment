@@ -56,12 +56,14 @@ class PokemonEnvironment(PyboyEnvironment):
         )
 
     # TODO Implement discrete action space version of this
-    def _run_action_on_emulator(self, action: float) -> None:
+    def _run_action_on_emulator(self, action_array: np.ndarray[float]) -> None:
         # Implement your action execution logic here
+
+        action = action_array[0]
 
         # Continuous Action is a float between 0 - 1 from Value based methods
         # We need to convert this to an action that the emulator can understand
-        bins = np.linspace(0, 1, self.action_num + 1)
+        bins = np.linspace(0, 1, len(self.valid_actions) + 1)
         button = np.digitize(action, bins) - 1
 
         # Push the button for a few frames
