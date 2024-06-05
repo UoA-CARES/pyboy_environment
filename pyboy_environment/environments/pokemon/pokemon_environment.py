@@ -2,6 +2,9 @@ import random
 from functools import cached_property
 from abc import abstractmethod
 
+from tkinter import Tk
+from pyboy_environment.state_display import StateDisplay
+
 import numpy as np
 from pyboy.utils import WindowEvent
 
@@ -18,8 +21,11 @@ class PokemonEnvironment(PyboyEnvironment):
         task: str,
         emulation_speed: int = 0,
         headless: bool = False,
-        init_name: str = "has_pokedex.state"
+        init_name: str = "has_pokedex.state",
     ) -> None:
+        if not headless:
+            self.state_display = StateDisplay()
+            
         super().__init__(
             task=task,
             rom_name="PokemonRed.gb",
@@ -80,7 +86,7 @@ class PokemonEnvironment(PyboyEnvironment):
         self.pyboy.send_input(self.release_button[button])
 
     def _generate_game_stats(self) -> dict[str, any]:
-        return {
+        stats = {
             "location": self._get_location(),
             "party_size": self._get_party_size(),
             "ids": self._read_party_id(),
@@ -97,6 +103,9 @@ class PokemonEnvironment(PyboyEnvironment):
             "money": self._read_money(),
             "events": self._read_events(),
         }
+        if not self.headless:
+            self.state_display.update_display(stats)
+        return stats
 
     @abstractmethod
     def _calculate_reward(self, new_state: dict) -> float:

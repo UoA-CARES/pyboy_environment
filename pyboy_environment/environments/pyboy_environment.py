@@ -36,6 +36,8 @@ class PyboyEnvironment(metaclass=ABCMeta):
 
         self.act_freq = act_freq
 
+        self.headless = headless
+
         head = "null" if headless else "SDL2"
         self.pyboy = PyBoy(
             self.rom_path,
