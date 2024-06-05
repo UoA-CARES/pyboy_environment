@@ -13,7 +13,7 @@ from abc import ABCMeta
 import numpy as np
 from pyboy.utils import WindowEvent
 
-from pyboy_environment.environments.environment import PyboyEnvironment
+from pyboy_environment.environments.pyboy_environment import PyboyEnvironment
 
 
 class MarioEnvironment(PyboyEnvironment, metaclass=ABCMeta):
@@ -29,7 +29,8 @@ class MarioEnvironment(PyboyEnvironment, metaclass=ABCMeta):
         super().__init__(
             task="mario",
             rom_name="SuperMarioLand.gb",
-            init_name="init.state",
+            init_state_file_name="init.state",
+            domain="mario",
             act_freq=act_freq,
             valid_actions=valid_actions,
             release_button=release_button,

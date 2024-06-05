@@ -1,6 +1,7 @@
 from pyboy_environment.environments import PyboyEnvironment
 from pyboy_environment.environments.mario.mario_run import MarioRun
-from pyboy_environment.environments.pokemon.pokemon_catch import PokemonCatch
+from pyboy_environment.environments.pokemon.tasks.catch import PokemonCatch
+from pyboy_environment.environments.pokemon.tasks.fight import PokemonFight
 
 
 def make(
@@ -15,12 +16,14 @@ def make(
         if task == "run":
             env = MarioRun(act_freq, emulation_speed, headless)
         else:
-            raise ValueError(f"Unkown Mario task: {task}")
+            raise ValueError(f"Unknown Mario task: {task}")
     elif domain == "pokemon":
         if task == "catch":
             env = PokemonCatch(act_freq, emulation_speed, headless)
+        elif task == "fight":
+            env = PokemonFight(act_freq, emulation_speed, headless)
         else:
-            raise ValueError(f"Unkown Pokemon task: {task}")
+            raise ValueError(f"Unknown Pokemon task: {task}")
     else:
-        raise ValueError(f"Unkown pyboy environment: {task}")
+        raise ValueError(f"Unknown pyboy environment: {task}")
     return env

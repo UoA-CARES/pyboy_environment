@@ -9,7 +9,7 @@ from pyboy_environment.environments.pokemon.pokemon_environment import (
 from pyboy_environment.environments.pokemon import pokemon_constants as pkc
 
 
-class PokemonCatch(PokemonEnvironment):
+class PokemonFight(PokemonEnvironment):
     def __init__(
         self,
         act_freq: int,
@@ -17,7 +17,6 @@ class PokemonCatch(PokemonEnvironment):
         headless: bool = False,
     ) -> None:
 
-        # We don't include start button here because we don't need it for this task
         valid_actions: list[WindowEvent] = [
             WindowEvent.PRESS_ARROW_DOWN,
             WindowEvent.PRESS_ARROW_LEFT,
@@ -38,6 +37,8 @@ class PokemonCatch(PokemonEnvironment):
 
         super().__init__(
             act_freq=act_freq,
+            task="fight",
+            init_name="rattata_fight.state",
             emulation_speed=emulation_speed,
             valid_actions=valid_actions,
             release_button=release_button,
@@ -50,7 +51,9 @@ class PokemonCatch(PokemonEnvironment):
 
     def _calculate_reward(self, new_state: dict) -> float:
         # Implement your reward calculation logic here
-        return self._caught_reward(new_state)
+        reward = self._seen_reward(new_state)
+        reward += self._xp_reward(new_state)
+        return reward
 
     def _check_if_done(self, game_stats: dict[str, any]) -> bool:
         # Setting done to true if agent beats first gym (temporary)

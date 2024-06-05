@@ -1,10 +1,11 @@
 import random
 from functools import cached_property
+from abc import abstractmethod
 
 import numpy as np
 from pyboy.utils import WindowEvent
 
-from pyboy_environment.environments.environment import PyboyEnvironment
+from pyboy_environment.environments.pyboy_environment import PyboyEnvironment
 from pyboy_environment.environments.pokemon import pokemon_constants as pkc
 
 
@@ -14,13 +15,16 @@ class PokemonEnvironment(PyboyEnvironment):
         act_freq: int,
         valid_actions: list[WindowEvent],
         release_button: list[WindowEvent],
+        task: str,
         emulation_speed: int = 0,
         headless: bool = False,
+        init_name: str = "has_pokedex.state"
     ) -> None:
         super().__init__(
-            task="pokemon",
+            task=task,
             rom_name="PokemonRed.gb",
-            init_name="has_pokedex.state",
+            domain="pokemon",
+            init_state_file_name=init_name,
             act_freq=act_freq,
             emulation_speed=emulation_speed,
             valid_actions=valid_actions,
@@ -94,9 +98,10 @@ class PokemonEnvironment(PyboyEnvironment):
             "events": self._read_events(),
         }
 
+    @abstractmethod
     def _calculate_reward(self, new_state: dict) -> float:
         # Implement your reward calculation logic here
-        return 0
+        pass
 
     def _check_if_done(self, game_stats: dict[str, any]) -> bool:
         # Setting done to true if agent beats first gym (temporary)
@@ -132,7 +137,7 @@ class PokemonEnvironment(PyboyEnvironment):
     # in grass reward function that returns reward
     def _grass_reward(self, new_state: dict[str, any]) -> int:
         if self._is_grass_tile():
-            return 19
+            return 1
         return 0
 
     def _read_party_id(self) -> list[int]:

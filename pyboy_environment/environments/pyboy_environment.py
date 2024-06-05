@@ -12,8 +12,9 @@ class PyboyEnvironment(metaclass=ABCMeta):
     def __init__(
         self,
         task: str,
+        domain: str,
         rom_name: str,
-        init_name: str,
+        init_state_file_name: str,
         act_freq: int,
         valid_actions: list,
         release_button: list,
@@ -21,10 +22,11 @@ class PyboyEnvironment(metaclass=ABCMeta):
         headless: bool = False,
     ) -> None:
         self.task = task
+        self.domain = domain
 
-        path = f"{Path.home()}/cares_rl_configs"
-        self.rom_path = f"{path}/{self.task}/{rom_name}"
-        self.init_path = f"{path}/{self.task}/{init_name}"
+        path = f"{Path.home()}/cares_rl_configs/{self.domain}"
+        self.rom_path = f"{path}/{rom_name}"
+        self.init_path = f"{path}/task_init_states/{init_state_file_name}"
 
         self.combo_actions = 0
 
