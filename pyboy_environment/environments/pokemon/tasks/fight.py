@@ -38,7 +38,7 @@ class PokemonFight(PokemonEnvironment):
         super().__init__(
             act_freq=act_freq,
             task="fight",
-            init_name="rattata_fight.state",
+            init_name="fight.state",
             emulation_speed=emulation_speed,
             valid_actions=valid_actions,
             release_button=release_button,
