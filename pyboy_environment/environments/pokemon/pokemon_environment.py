@@ -18,7 +18,7 @@ class PokemonEnvironment(PyboyEnvironment):
         task: str,
         emulation_speed: int = 0,
         headless: bool = False,
-        init_name: str = "has_pokedex.state"
+        init_name: str = "has_pokedex.state",
     ) -> None:
         super().__init__(
             task=task,
@@ -60,7 +60,7 @@ class PokemonEnvironment(PyboyEnvironment):
         )
 
     # TODO Implement discrete action space version of this
-    def _run_action_on_emulator(self, action_array: np.ndarray[float]) -> None:
+    def _run_action_on_emulator(self, action_array: np.ndarray) -> None:
         # Implement your action execution logic here
 
         action = action_array[0]
