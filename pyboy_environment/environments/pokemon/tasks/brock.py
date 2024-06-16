@@ -24,6 +24,7 @@ class PokemonBrock(PokemonEnvironment):
             WindowEvent.PRESS_ARROW_UP,
             WindowEvent.PRESS_BUTTON_A,
             WindowEvent.PRESS_BUTTON_B,
+            WindowEvent.PRESS_BUTTON_START,
         ]
 
         release_button: list[WindowEvent] = [
@@ -33,6 +34,7 @@ class PokemonBrock(PokemonEnvironment):
             WindowEvent.RELEASE_ARROW_UP,
             WindowEvent.RELEASE_BUTTON_A,
             WindowEvent.RELEASE_BUTTON_B,
+            WindowEvent.RELEASE_BUTTON_START,
         ]
 
         super().__init__(
@@ -61,4 +63,4 @@ class PokemonBrock(PokemonEnvironment):
         # Implement your truncation check logic here
 
         # Maybe if we run out of pokeballs...? or a max step count
-        return False
+        return self.steps > 1000

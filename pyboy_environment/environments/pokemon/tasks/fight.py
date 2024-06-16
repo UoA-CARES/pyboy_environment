@@ -63,4 +63,4 @@ class PokemonFight(PokemonEnvironment):
         # Implement your truncation check logic here
 
         # Maybe if we run out of pokeballs...? or a max step count
-        return False
+        return self.steps >= 1000
