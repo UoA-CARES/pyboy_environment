@@ -51,8 +51,11 @@ class PokemonFight(PokemonEnvironment):
 
     def _calculate_reward(self, new_state: dict) -> float:
         # Implement your reward calculation logic here
-        reward = self._seen_reward(new_state)
-        reward += self._xp_reward(new_state)
+        reward = -10
+        reward += self._xp_reward(new_state) * 10
+        reward += self._enemy_health_reward(new_state) * 50
+        # reward += self._player_defeated_reward(new_state)
+        reward += self._levels_reward(new_state)
         return reward
 
     def _check_if_done(self, game_stats: dict[str, any]) -> bool:
@@ -63,4 +66,13 @@ class PokemonFight(PokemonEnvironment):
         # Implement your truncation check logic here
 
         # Maybe if we run out of pokeballs...? or a max step count
-        return False
+        return self.steps >= 300
+
+    def _levels_reward(self, new_state: dict[str, any]) -> int:
+        reward = 0
+        new_levels = new_state["levels"]
+        old_levels = self.prior_game_stats["levels"]
+        for i in range(len(new_levels)):
+            if (old_levels[i] != 0):
+                reward += 10000 * (new_levels[i] / old_levels[i] - 1)
+        return reward
