@@ -32,6 +32,9 @@ class PokemonEnvironment(PyboyEnvironment):
             headless=headless,
         )
 
+    def reset(self):
+        PyboyEnvironment.reset(self)
+
     @cached_property
     def min_action_value(self) -> float:
         return 0
@@ -278,7 +281,7 @@ class PokemonEnvironment(PyboyEnvironment):
 
     def _seen_reward(self, new_state: dict[str, any]) -> int:
         return new_state["seen_pokemon"] - self.prior_game_stats["seen_pokemon"]
-
+    
     def _health_reward(self, new_state: dict[str, any]) -> int:
         return sum(new_state["hp"]["current"]) - sum(
             self.prior_game_stats["hp"]["current"]
