@@ -38,7 +38,7 @@ class PokemonFight(PokemonEnvironment):
         super().__init__(
             act_freq=act_freq,
             task="fight",
-            init_name="fight.state",
+            init_name="has_pokedex.state",
             emulation_speed=emulation_speed,
             valid_actions=valid_actions,
             release_button=release_button,
@@ -56,6 +56,7 @@ class PokemonFight(PokemonEnvironment):
         reward += self._enemy_health_reward(new_state) * 50
         # reward += self._player_defeated_reward(new_state)
         reward += self._levels_reward(new_state)
+        reward += self._start_battle_reward(new_state)
         return reward
 
     def _check_if_done(self, game_stats: dict[str, any]) -> bool:
@@ -66,7 +67,12 @@ class PokemonFight(PokemonEnvironment):
         # Implement your truncation check logic here
 
         # Maybe if we run out of pokeballs...? or a max step count
-        return self.steps >= 300
+        return self.steps >= 500
+
+    def _start_battle_reward(self, new_state) -> int:
+        if (new_state["battle_type"] != 0):
+            return 20
+        return 0
 
     def _levels_reward(self, new_state: dict[str, any]) -> int:
         reward = 0
