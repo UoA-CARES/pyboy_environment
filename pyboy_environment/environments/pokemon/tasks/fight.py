@@ -70,7 +70,7 @@ class PokemonFight(PokemonEnvironment):
         return self.steps >= 500
 
     def _start_battle_reward(self, new_state) -> int:
-        if (new_state["battle_type"] != 0):
+        if (new_state["battle_type"] != 0 and self.prior_game_stats["battle_type"] == 0):
             return 20
         return 0
 
