@@ -308,19 +308,21 @@ class PokemonEnvironment(PyboyEnvironment):
 
     def _leave_battle_reward(self, new_state: dict[str, any]) -> int:
         if (new_state["battle_type"] == 0):
-            return 5
+            return 1
         return 0
 
     def _player_defeated_reward(self, new_state: dict[str, any]) -> int:
         if (sum(new_state["hp"]["current"]) == 0):
-            return -50
+            return -1
         return 0
 
     def _current_health_reward(self, new_state: dict[str, any]) -> int:
         return new_state["current_pokemon_health"] - self.prior_game_stats["current_pokemon_health"]
 
     def _enemy_health_reward(self, new_state: dict[str, any]) -> int:
-        return self.prior_game_stats["enemy_pokemon_health"] - new_state["enemy_pokemon_health"]
+        if (new_state["battle_type"] != 0 and self.prior_game_stats["battle_type"] != 0):
+            return self.prior_game_stats["enemy_pokemon_health"] - new_state["enemy_pokemon_health"]
+        return 0
 
     def _xp_reward(self, new_state: dict[str, any]) -> int:
         return sum(new_state["xp"]) - sum(self.prior_game_stats["xp"])
