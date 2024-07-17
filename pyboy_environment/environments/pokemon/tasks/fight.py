@@ -8,7 +8,7 @@ from pyboy_environment.environments.pokemon.pokemon_environment import (
 )
 from pyboy_environment.environments.pokemon import pokemon_constants as pkc
 
-# rewards 
+# rewards
 
 do_nothing_base = -1
 start_battle_reward = 100
@@ -19,6 +19,7 @@ level_up_multiplier = 1000
 # other params
 
 num_steps_truncate = 500
+
 
 class PokemonFight(PokemonEnvironment):
     def __init__(
@@ -58,7 +59,7 @@ class PokemonFight(PokemonEnvironment):
 
     def _get_state(self) -> np.ndarray:
         # Implement your state retrieval logic here
-        pass
+        return [0, 0, 0]
 
     def _calculate_reward(self, new_state: dict) -> float:
         # Implement your reward calculation logic here
@@ -81,7 +82,7 @@ class PokemonFight(PokemonEnvironment):
         return self.steps >= num_steps_truncate
 
     def _start_battle_reward(self, new_state) -> int:
-        if (new_state["battle_type"] != 0 and self.prior_game_stats["battle_type"] == 0):
+        if new_state["battle_type"] != 0 and self.prior_game_stats["battle_type"] == 0:
             return start_battle_reward
         return 0
 
@@ -90,6 +91,6 @@ class PokemonFight(PokemonEnvironment):
         new_levels = new_state["levels"]
         old_levels = self.prior_game_stats["levels"]
         for i in range(len(new_levels)):
-            if (old_levels[i] != 0):
-                reward += (new_levels[i] / old_levels[i] - 1)
+            if old_levels[i] != 0:
+                reward += new_levels[i] / old_levels[i] - 1
         return reward

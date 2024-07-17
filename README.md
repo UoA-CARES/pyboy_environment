@@ -1,5 +1,5 @@
 # pyboy_environment
-Envrionment for pyboy games for Reinforcement Learning training
+Environment for pyboy games for Reinforcement Learning training
 
 ## Installation Instructions
 
@@ -10,7 +10,7 @@ Run `pip3 install -r requirements.txt` in the **root directory** of the package
 To make the module **globally accessible** in your working environment run `pip3 install --editable .` in the **project root**
 
 # Usage
-This package provides the baseline code for the pyboy environments - you run these envrionments through gymnasium_envrionment.
+This package provides the baseline code for the pyboy environments - you run these environments through gymnasium_environment.
 
 `train.py` takes in hyperparameters that allow you to customise the training run enviromment – OpenAI or DMCS Environment - or RL algorithm. Use `python3 train.py -h` for help on what parameters are available for customisation.
 
@@ -22,7 +22,7 @@ python3 train.py run --gym pyboy --task mario TD3
 # Games
 Environment running Gameboy games utilising the pyboy wrapper: https://github.com/UoA-CARES/pyboy_environment 
 
-These games are run through the generalised gymnaisum environment: https://github.com/UoA-CARES/gymnasium_envrionments
+These games are run through the generalised gymnaisum environment: https://github.com/UoA-CARES/gymnasium_environments
 
 ## Mario
 

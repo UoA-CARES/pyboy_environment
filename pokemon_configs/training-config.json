@@ -1,0 +1,10 @@
+{
+  "act_freq": 24,
+  "emulation_speed": 0,
+  "headless": 1,
+  "seeds": [10],
+  "plot_frequency": 100,
+  "checkpoint_frequency": 100,
+  "number_steps_per_evaluation": 10000,
+  "number_eval_episodes": 10
+}
