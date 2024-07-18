@@ -31,19 +31,18 @@ def main():
     The main function that orchestrates the training process.
     """
     parser = RLParser()
-    
+
     parser.add_configuration("env_config", PyboyEnvironmentConfig)
     parser.add_configuration("training_config", TrainingConfig)
 
     configurations = parser.parse_args()
-    
+
     env_config = configurations["env_config"]
     training_config = configurations["training_config"]
     alg_config = configurations["algorithm_config"]
 
     network_factory = NetworkFactory()
     memory_factory = MemoryFactory()
-
 
     logging.info(
         "\n---------------------------------------------------\n"
@@ -68,35 +67,47 @@ def main():
     )
 
     logging.info(f"\n{yaml.dump(dict(training_config), default_flow_style=False)}")
-    logging.info(f"Device: {torch.device('cuda' if torch.cuda.is_available() else 'cpu')}")
+    logging.info(
+        f"Device: {torch.device('cuda' if torch.cuda.is_available() else 'cpu')}"
+    )
 
     glob_log_dir = os.environ.get("CARES_LOG_DIR", f"{Path.home()}/cares_rl_logs")
 
     domain = env_config.domain
     task = env_config.task
-    run_name_input = input("Double check your experiment configurations and give a name for this run (or just press ENTER)\n")
-    
-    run_name = run_name_input if run_name_input != "" else env_config.run_name if env_config.run_name != "" else "unnamed_run"
-    
+    run_name_input = input(
+        "Double check your experiment configurations and give a name for this run (or just press ENTER)\n"
+    )
+
+    run_name = (
+        run_name_input
+        if run_name_input != ""
+        else env_config.run_name if env_config.run_name != "" else "unnamed_run"
+    )
+
     run_name_with_time = f"{run_name}_{datetime.now().strftime('%y_%m_%d_%H-%M-%S')}"
 
     log_dir = f"{domain}/{task}/{run_name_with_time}"
-    
+
     if not torch.cuda.is_available():
-        no_gpu_answer = input("No cuda detected. Do you still want to continue? Note: Training will be slow. [y/n]")
+        no_gpu_answer = input(
+            "No cuda detected. Do you still want to continue? Note: Training will be slow. [y/n]"
+        )
 
         if no_gpu_answer not in ["y", "Y"]:
             logging.info("Terminating Experiment - check CUDA is installed.")
             sys.exit()
-    
+
     # This line should be here for seed consistency issues
     env = create_environment(env_config, bool(alg_config.image_observation))
-    
+
     hlp.set_seed(training_config.seed)
     env.set_seed(training_config.seed)
 
     logging.info(f"Algorithm: {alg_config.algorithm}")
-    agent = network_factory.create_network(env.observation_space, env.action_num, alg_config)
+    agent = network_factory.create_network(
+        env.observation_space, env.action_num, alg_config
+    )
 
     if agent is None:
         raise ValueError(f"Unknown agent for default algorithms {alg_config.algorithm}")

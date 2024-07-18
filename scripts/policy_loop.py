@@ -8,6 +8,7 @@ from cares_reinforcement_learning.util.configurations import AlgorithmConfig
 
 from training_config import TrainingConfig
 
+
 def evaluate_policy_network(
     environment, agent, training_config: TrainingConfig, record=None, total_steps=0
 ):

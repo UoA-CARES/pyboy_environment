@@ -108,7 +108,11 @@ class PyboyEnvironment(metaclass=ABCMeta):
         return bin(bits).count("1")
 
     def _read_triple(self, start_add: int) -> int:
-        return 256 * 256 * self._read_m(start_add) + 256 * self._read_m(start_add + 1) + self._read_m(start_add + 2)
+        return (
+            256 * 256 * self._read_m(start_add)
+            + 256 * self._read_m(start_add + 1)
+            + self._read_m(start_add + 2)
+        )
 
     def _read_bcd(self, num: int) -> int:
         return 10 * ((num >> 4) & 0x0F) + (num & 0x0F)

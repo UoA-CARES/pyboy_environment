@@ -6,6 +6,7 @@ from pyboy_environment.environments.pokemon.tasks.brock import PokemonBrock
 
 from pyboy_environment.image_wrapper import ImageWrapper
 
+
 def create_environment(config, image_observation: bool = True) -> PyboyEnvironment:
 
     domain = config.domain

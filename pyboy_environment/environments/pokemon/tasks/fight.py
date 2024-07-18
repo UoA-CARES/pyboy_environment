@@ -22,10 +22,7 @@ num_steps_truncate = 500
 
 
 class PokemonFight(PokemonEnvironment):
-    def __init__(
-        self,
-        config
-    ) -> None:
+    def __init__(self, config) -> None:
 
         valid_actions: list[WindowEvent] = [
             WindowEvent.PRESS_ARROW_DOWN,

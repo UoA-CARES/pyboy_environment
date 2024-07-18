@@ -10,10 +10,7 @@ from pyboy_environment.environments.pokemon import pokemon_constants as pkc
 
 
 class PokemonBrock(PokemonEnvironment):
-    def __init__(
-        self,
-        config
-    ) -> None:
+    def __init__(self, config) -> None:
 
         valid_actions: list[WindowEvent] = [
             WindowEvent.PRESS_ARROW_DOWN,

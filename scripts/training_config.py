@@ -1,7 +1,7 @@
-
 from typing import List, Optional
 
 from cares_reinforcement_learning.util.configurations import SubscriptableClass
+
 
 class TrainingConfig(SubscriptableClass):
     """
