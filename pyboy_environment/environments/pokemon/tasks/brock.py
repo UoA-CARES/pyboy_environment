@@ -9,15 +9,12 @@ from pyboy_environment.environments.pokemon.pokemon_environment import (
 from pyboy_environment.environments.pokemon import pokemon_constants as pkc
 
 
-class PokemonCatch(PokemonEnvironment):
+class PokemonBrock(PokemonEnvironment):
     def __init__(
         self,
-        act_freq: int,
-        emulation_speed: int = 0,
-        headless: bool = False,
+        config
     ) -> None:
 
-        # We don't include start button here because we don't need it for this task
         valid_actions: list[WindowEvent] = [
             WindowEvent.PRESS_ARROW_DOWN,
             WindowEvent.PRESS_ARROW_LEFT,
@@ -25,6 +22,7 @@ class PokemonCatch(PokemonEnvironment):
             WindowEvent.PRESS_ARROW_UP,
             WindowEvent.PRESS_BUTTON_A,
             WindowEvent.PRESS_BUTTON_B,
+            WindowEvent.PRESS_BUTTON_START,
         ]
 
         release_button: list[WindowEvent] = [
@@ -34,15 +32,18 @@ class PokemonCatch(PokemonEnvironment):
             WindowEvent.RELEASE_ARROW_UP,
             WindowEvent.RELEASE_BUTTON_A,
             WindowEvent.RELEASE_BUTTON_B,
+            WindowEvent.RELEASE_BUTTON_START,
         ]
 
         super().__init__(
-            act_freq=act_freq,
-            task="catch",
-            emulation_speed=emulation_speed,
+            task="brock",
+            act_freq=config.act_freq,
+            init_state_path=config.init_state_path,
+            rom_path=config.rom_path,
+            emulation_speed=config.emulation_speed,
             valid_actions=valid_actions,
-            release_button=release_button,
-            headless=headless,
+            release_buttons=release_buttons,
+            headless=config.headless,
         )
 
     def _get_state(self) -> np.ndarray:
@@ -51,14 +52,14 @@ class PokemonCatch(PokemonEnvironment):
 
     def _calculate_reward(self, new_state: dict) -> float:
         # Implement your reward calculation logic here
-        return self._caught_reward(new_state)
+        return 0
 
     def _check_if_done(self, game_stats: dict[str, any]) -> bool:
         # Setting done to true if agent beats first gym (temporary)
-        return game_stats["party_size"] > self.prior_game_stats["party_size"]
+        return game_stats["badges"] > self.prior_game_stats["badges"]
 
     def _check_if_truncated(self, game_stats: dict) -> bool:
         # Implement your truncation check logic here
 
         # Maybe if we run out of pokeballs...? or a max step count
-        return self.steps >= 1000
+        return self.steps > 1000
