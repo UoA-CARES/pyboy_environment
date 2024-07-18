@@ -4,22 +4,20 @@ import time
 import numpy as np
 
 from cares_reinforcement_learning.util import helpers as hlp
-from cares_reinforcement_learning.util.configurations import (
-    AlgorithmConfig,
-    TrainingConfig,
-)
+from cares_reinforcement_learning.util.configurations import AlgorithmConfig
 
+from training_config import TrainingConfig
 
 def evaluate_policy_network(
-    env, agent, config: TrainingConfig, record=None, total_steps=0
+    environment, agent, training_config: TrainingConfig, record=None, total_steps=0
 ):
     if record is not None:
-        frame = env.grab_frame()
+        frame = environment.grab_frame()
         record.start_video(total_steps + 1, frame)
 
-    number_eval_episodes = int(config.number_eval_episodes)
+    number_eval_episodes = int(training_config.number_eval_episodes)
 
-    state = env.reset()
+    state = environment.reset()
 
     for eval_episode_counter in range(number_eval_episodes):
         episode_timesteps = 0
@@ -32,14 +30,14 @@ def evaluate_policy_network(
             episode_timesteps += 1
             action = agent.select_action_from_policy(state, evaluation=True)
             action_env = hlp.denormalize(
-                action, env.max_action_value, env.min_action_value
+                action, environment.max_action_value, environment.min_action_value
             )
 
-            state, reward, done, truncated = env.step(action_env)
+            state, reward, done, truncated = environment.step(action_env)
             episode_reward += reward
 
             if eval_episode_counter == 0 and record is not None:
-                frame = env.grab_frame()
+                frame = environment.grab_frame()
                 record.log_video(frame)
 
             if done or truncated:
@@ -52,7 +50,7 @@ def evaluate_policy_network(
                     )
 
                 # Reset environment
-                state = env.reset()
+                state = environment.reset()
                 episode_reward = 0
                 episode_timesteps = 0
                 episode_num += 1
@@ -76,7 +74,7 @@ def policy_based_train(
     number_steps_per_evaluation = train_config.number_steps_per_evaluation
     number_steps_per_train_policy = alg_config.number_steps_per_train_policy
 
-    # Algorthm specific attributes - e.g. NaSA-TD3 dd
+    # Algorithm specific attributes - e.g. NaSA-TD3 dd
     intrinsic_on = (
         bool(alg_config.intrinsic_on) if hasattr(alg_config, "intrinsic_on") else False
     )
@@ -109,24 +107,14 @@ def policy_based_train(
                 f"Running Exploration Steps {total_step_counter + 1}/{max_steps_exploration}"
             )
 
-            action_env = env.sample_action()
-
-            # algorithm range [-1, 1] - note for DMCS this is redudenant but required for openai
-            action = hlp.normalize(
-                action_env, env.max_action_value, env.min_action_value
-            )
+            action = env.sample_action()
         else:
             noise_scale *= noise_decay
             noise_scale = max(min_noise, noise_scale)
 
-            # algorithm range [-1, 1]
             action = agent.select_action_from_policy(state, noise_scale=noise_scale)
-            # mapping to env range [e.g. -2 , 2 for pendulum] - note for DMCS this is redudenant but required for openai
-            action_env = hlp.denormalize(
-                action, env.max_action_value, env.min_action_value
-            )
 
-        next_state, reward_extrinsic, done, truncated = env.step(action_env)
+        next_state, reward_extrinsic, done, truncated = env.step(action)
         if display:
             env.render()
 

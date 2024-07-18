@@ -17,24 +17,25 @@ class PokemonEnvironment(PyboyEnvironment):
         self,
         act_freq: int,
         valid_actions: list[WindowEvent],
-        release_button: list[WindowEvent],
+        release_buttons: list[WindowEvent],
         task: str,
+        rom_path: str,
+        init_state_path: str,
         emulation_speed: int = 0,
         headless: bool = False,
-        init_name: str = "has_pokedex.state",
     ) -> None:
         if not headless:
             self.state_display = StateDisplay()
 
         super().__init__(
             task=task,
-            rom_name="PokemonRed.gb",
+            rom_path=rom_path,
             domain="pokemon",
-            init_state_file_name=init_name,
+            init_state_path=init_state_path,
             act_freq=act_freq,
             emulation_speed=emulation_speed,
             valid_actions=valid_actions,
-            release_button=release_button,
+            release_buttons=release_buttons,
             headless=headless,
         )
 
@@ -57,7 +58,7 @@ class PokemonEnvironment(PyboyEnvironment):
         return 1
 
     def sample_action(self) -> int:
-        return random.uniform(0, 1)
+        return [random.uniform(0, 1)]
 
     def _get_state(self) -> np.ndarray:
         # Implement your state retrieval logic here - compact state based representation
@@ -84,7 +85,7 @@ class PokemonEnvironment(PyboyEnvironment):
             self.pyboy.tick()
 
         # Release the button
-        self.pyboy.send_input(self.release_button[button])
+        self.pyboy.send_input(self.release_buttons[button])
 
     def _generate_game_stats(self) -> dict[str, any]:
         stats = {

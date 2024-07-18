@@ -7,17 +7,16 @@ from typing import Optional
 
 from pydantic import Field
 
-from cares_reinforcement_learning.util.configurations import EnvironmentConfig
+from cares_reinforcement_learning.util.configurations import SubscriptableClass
 
 file_path = Path(__file__).parent.resolve()
 
 
-class PyboyEnvironmentConfig(EnvironmentConfig):
+class PyboyEnvironmentConfig(SubscriptableClass):
     """
-    Configuration class for Gym Environment.
+    Base configuration class for PyBoy environments.
 
     Attributes:
-        gym (str): Gym Environment <openai, dmcs, pyboy>
         task (str): Task description
         domain (Optional[str]): Domain description (default: "")
         image_observation (Optional[bool]): Whether to use image observation (default: False)
@@ -27,8 +26,8 @@ class PyboyEnvironmentConfig(EnvironmentConfig):
         headless (Optional[bool]): Whether to run in headless mode (default: False)
     """
 
-    gym: str = "pyboy"
     task: str
+    run_name: Optional[str] = ""
     domain: Optional[str] = ""
     display: Optional[int] = 0
 
@@ -38,8 +37,9 @@ class PyboyEnvironmentConfig(EnvironmentConfig):
     frame_height: Optional[int] = 84
     grey_scale: Optional[int] = 0
 
-    # pyboy configurations TODO move...
-    rom_path: Optional[str] = f"{Path.home()}/cares_rl_configs"
+    # PyBoy configurations
+    rom_path: Optional[str]
+    init_state_path: Optional[str]
     act_freq: Optional[int] = 24
     emulation_speed: Optional[int] = 0
-    headless: Optional[int] = 0
+    headless: Optional[bool] = False

@@ -2,6 +2,7 @@ from abc import ABCMeta, abstractmethod
 from functools import cached_property
 from pathlib import Path
 
+import os
 import cv2
 import numpy as np
 from pyboy import PyBoy
@@ -13,26 +14,25 @@ class PyboyEnvironment(metaclass=ABCMeta):
         self,
         task: str,
         domain: str,
-        rom_name: str,
-        init_state_file_name: str,
+        rom_path: str,
+        init_state_path: str,
         act_freq: int,
         valid_actions: list,
-        release_button: list,
+        release_buttons: list,
         emulation_speed: int = 0,
         headless: bool = False,
     ) -> None:
         self.task = task
         self.domain = domain
 
-        path = f"{Path.home()}/cares_rl_configs/{self.domain}"
-        self.rom_path = f"{path}/{rom_name}"
-        self.init_path = f"{path}/task_init_states/{init_state_file_name}"
+        self.rom_path = os.path.expanduser(rom_path)
+        self.init_path = os.path.expanduser(init_state_path)
 
         self.combo_actions = 0
 
         self.valid_actions = valid_actions
 
-        self.release_button = release_button
+        self.release_buttons = release_buttons
 
         self.act_freq = act_freq
 

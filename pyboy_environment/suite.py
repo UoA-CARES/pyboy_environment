@@ -6,7 +6,7 @@ from pyboy_environment.environments.pokemon.tasks.fight import PokemonFight
 from pyboy_environment.image_wrapper import ImageWrapper
 
 
-def createEnvironment(config, image_observation: bool = True) -> PyboyEnvironment:
+def create_environment(config, image_observation: bool = True) -> PyboyEnvironment:
 
     domain = config.domain
     task = config.task
@@ -17,9 +17,9 @@ def createEnvironment(config, image_observation: bool = True) -> PyboyEnvironmen
             raise ValueError(f"Unknown Mario task: {task}")
     elif domain == "pokemon":
         if task == "catch":
-            env = PokemonCatch(config.act_freq, config.emulation_speed, config.headless)
+            env = PokemonCatch(config)
         elif task == "fight":
-            env = PokemonFight(config.act_freq, config.emulation_speed, config.headless)
+            env = PokemonFight(config)
         else:
             raise ValueError(f"Unknown Pokemon task: {task}")
     else:

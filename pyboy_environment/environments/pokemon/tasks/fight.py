@@ -24,9 +24,7 @@ num_steps_truncate = 500
 class PokemonFight(PokemonEnvironment):
     def __init__(
         self,
-        act_freq: int,
-        emulation_speed: int = 0,
-        headless: bool = False,
+        config
     ) -> None:
 
         valid_actions: list[WindowEvent] = [
@@ -38,7 +36,7 @@ class PokemonFight(PokemonEnvironment):
             WindowEvent.PRESS_BUTTON_B,
         ]
 
-        release_button: list[WindowEvent] = [
+        release_buttons: list[WindowEvent] = [
             WindowEvent.RELEASE_ARROW_DOWN,
             WindowEvent.RELEASE_ARROW_LEFT,
             WindowEvent.RELEASE_ARROW_RIGHT,
@@ -48,13 +46,14 @@ class PokemonFight(PokemonEnvironment):
         ]
 
         super().__init__(
-            act_freq=act_freq,
             task="fight",
-            init_name="has_pokedex.state",
-            emulation_speed=emulation_speed,
+            act_freq=config.act_freq,
+            init_state_path=config.init_state_path,
+            rom_path=config.rom_path,
+            emulation_speed=config.emulation_speed,
             valid_actions=valid_actions,
-            release_button=release_button,
-            headless=headless,
+            release_buttons=release_buttons,
+            headless=config.headless,
         )
 
     def _get_state(self) -> np.ndarray:
