@@ -20,7 +20,7 @@ level_up_multiplier = 1000
 
 num_steps_truncate = 500
 
-class PokemonFight(PokemonEnvironment):
+class PokemonFightEnvironment(PokemonEnvironment):
     def __init__(
         self,
         act_freq: int,
@@ -28,31 +28,11 @@ class PokemonFight(PokemonEnvironment):
         headless: bool = False,
     ) -> None:
 
-        valid_actions: list[WindowEvent] = [
-            WindowEvent.PRESS_ARROW_DOWN,
-            WindowEvent.PRESS_ARROW_LEFT,
-            WindowEvent.PRESS_ARROW_RIGHT,
-            WindowEvent.PRESS_ARROW_UP,
-            WindowEvent.PRESS_BUTTON_A,
-            WindowEvent.PRESS_BUTTON_B,
-        ]
-
-        release_button: list[WindowEvent] = [
-            WindowEvent.RELEASE_ARROW_DOWN,
-            WindowEvent.RELEASE_ARROW_LEFT,
-            WindowEvent.RELEASE_ARROW_RIGHT,
-            WindowEvent.RELEASE_ARROW_UP,
-            WindowEvent.RELEASE_BUTTON_A,
-            WindowEvent.RELEASE_BUTTON_B,
-        ]
-
         super().__init__(
             act_freq=act_freq,
             task="fight",
             init_name="has_pokedex.state",
             emulation_speed=emulation_speed,
-            valid_actions=valid_actions,
-            release_button=release_button,
             headless=headless,
         )
 

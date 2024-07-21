@@ -16,8 +16,6 @@ class PokemonEnvironment(PyboyEnvironment):
     def __init__(
         self,
         act_freq: int,
-        valid_actions: list[WindowEvent],
-        release_button: list[WindowEvent],
         task: str,
         emulation_speed: int = 0,
         headless: bool = False,
@@ -25,6 +23,24 @@ class PokemonEnvironment(PyboyEnvironment):
     ) -> None:
         if not headless:
             self.state_display = StateDisplay()
+            
+        valid_actions: list[WindowEvent] = [
+            WindowEvent.PRESS_ARROW_DOWN,
+            WindowEvent.PRESS_ARROW_LEFT,
+            WindowEvent.PRESS_ARROW_RIGHT,
+            WindowEvent.PRESS_ARROW_UP,
+            WindowEvent.PRESS_BUTTON_A,
+            WindowEvent.PRESS_BUTTON_B,
+        ]
+
+        release_button: list[WindowEvent] = [
+            WindowEvent.RELEASE_ARROW_DOWN,
+            WindowEvent.RELEASE_ARROW_LEFT,
+            WindowEvent.RELEASE_ARROW_RIGHT,
+            WindowEvent.RELEASE_ARROW_UP,
+            WindowEvent.RELEASE_BUTTON_A,
+            WindowEvent.RELEASE_BUTTON_B,
+        ]
 
         super().__init__(
             task=task,
@@ -51,13 +67,19 @@ class PokemonEnvironment(PyboyEnvironment):
         return len(self._get_state())
 
     @cached_property
-    def action_num(self) -> int:
+    def action_num(self) -> [int]:
+        
         # Single button input at each step
-        # No requirement for multiple buttons to be pressed at once like Mario
-        return 1
+        return len(self.valid_actions)
 
-    def sample_action(self) -> int:
-        return random.uniform(0, 1)
+    def sample_action(self) -> [int]:
+        
+        length = len(self.valid_actions)
+        array = np.zeros(length, dtype=int)
+        random_index = np.random.randint(0, length)
+        array[random_index] = 1
+    
+        return array
 
     def _get_state(self) -> np.ndarray:
         # Implement your state retrieval logic here - compact state based representation
@@ -69,22 +91,16 @@ class PokemonEnvironment(PyboyEnvironment):
     def _run_action_on_emulator(self, action_array: np.ndarray) -> None:
         # Implement your action execution logic here
 
-        action = action_array[0]
-        action = min(action, 0.99)
-
-        # Continuous Action is a float between 0 - 1 from Value based methods
-        # We need to convert this to an action that the emulator can understand
-        bins = np.linspace(0, 1, len(self.valid_actions) + 1)
-        button = np.digitize(action, bins) - 1
+        action_idx = np.argmax(action_array)
 
         # Push the button for a few frames
-        self.pyboy.send_input(self.valid_actions[button])
+        self.pyboy.send_input(self.valid_actions[action_idx])
 
         for _ in range(self.act_freq):
             self.pyboy.tick()
 
         # Release the button
-        self.pyboy.send_input(self.release_button[button])
+        self.pyboy.send_input(self.release_button[action_idx])
 
     def _generate_game_stats(self) -> dict[str, any]:
         stats = {
