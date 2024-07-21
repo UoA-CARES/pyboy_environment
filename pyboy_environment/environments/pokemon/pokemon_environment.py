@@ -2,6 +2,9 @@ import random
 from functools import cached_property
 from abc import abstractmethod
 
+from tkinter import Tk
+from pyboy_environment.state_display import StateDisplay
+
 import numpy as np
 from pyboy.utils import WindowEvent
 
@@ -20,6 +23,9 @@ class PokemonEnvironment(PyboyEnvironment):
         headless: bool = False,
         init_name: str = "has_pokedex.state",
     ) -> None:
+        if not headless:
+            self.state_display = StateDisplay()
+
         super().__init__(
             task=task,
             rom_name="PokemonRed.gb",
@@ -64,6 +70,7 @@ class PokemonEnvironment(PyboyEnvironment):
         # Implement your action execution logic here
 
         action = action_array[0]
+        action = min(action, 0.99)
 
         # Continuous Action is a float between 0 - 1 from Value based methods
         # We need to convert this to an action that the emulator can understand
@@ -80,8 +87,11 @@ class PokemonEnvironment(PyboyEnvironment):
         self.pyboy.send_input(self.release_button[button])
 
     def _generate_game_stats(self) -> dict[str, any]:
-        return {
+        stats = {
             "location": self._get_location(),
+            "battle_type": self._read_battle_type(),
+            "current_pokemon_health": self._get_current_pokemon_health(),
+            "enemy_pokemon_health": self._get_enemy_pokemon_health(),
             "party_size": self._get_party_size(),
             "ids": self._read_party_id(),
             "pokemon": [pkc.get_pokemon(id) for id in self._read_party_id()],
@@ -97,6 +107,9 @@ class PokemonEnvironment(PyboyEnvironment):
             "money": self._read_money(),
             "events": self._read_events(),
         }
+        if not self.headless:
+            self.state_display.update_display(stats)
+        return stats
 
     @abstractmethod
     def _calculate_reward(self, new_state: dict) -> float:
@@ -227,8 +240,17 @@ class PokemonEnvironment(PyboyEnvironment):
             for i in range(event_flags_start, event_flags_end)
         ]
 
+    def _read_battle_type(self) -> int:
+        return self._read_m(0xD057)
+
+    def _get_enemy_pokemon_health(self) -> int:
+        return self._read_hp(0xCFE6)
+
+    def _get_current_pokemon_health(self) -> int:
+        return self._read_hp(0xD015)
+
     def _get_screen_background_tilemap(self):
-        ### SIMILAR TO CURRENT pyboy.game_wrapper()._game_area_np(), BUT ONLY FOR BACKGROUND TILEMAP, SO NPC ARE SKIPPED
+        # SIMILAR TO CURRENT pyboy.game_wrapper()._game_area_np(), BUT ONLY FOR BACKGROUND TILEMAP, SO NPC ARE SKIPPED
         bsm = self.pyboy.botsupport_manager()
         ((scx, scy), (wx, wy)) = bsm.screen().tilemap_position()
         tilemap = np.array(bsm.tilemap_background()[:, :])
@@ -251,7 +273,7 @@ class PokemonEnvironment(PyboyEnvironment):
             else:
                 walkable_tiles_indexes.append(tile_index + 0x100)
         screen_tiles = self._get_screen_background_tilemap()
-        bottom_left_screen_tiles = screen_tiles[1 : 1 + screen_tiles.shape[0] : 2, ::2]
+        bottom_left_screen_tiles = screen_tiles[1: 1 + screen_tiles.shape[0]: 2, ::2]
         walkable_matrix = np.isin(
             bottom_left_screen_tiles, walkable_tiles_indexes
         ).astype(np.uint8)
@@ -267,8 +289,8 @@ class PokemonEnvironment(PyboyEnvironment):
         _collision = self._get_screen_walkable_matrix()
         for i in range(height // 2):
             for j in range(width // 2):
-                game_area[i * 2][j * 2 : j * 2 + 2] = _collision[i][j]
-                game_area[i * 2 + 1][j * 2 : j * 2 + 2] = _collision[i][j]
+                game_area[i * 2][j * 2: j * 2 + 2] = _collision[i][j]
+                game_area[i * 2 + 1][j * 2: j * 2 + 2] = _collision[i][j]
         return game_area
 
     # Note: These are all examples of rewards we can calculate based on the stats, you can implement and modify your own as you please
@@ -283,6 +305,24 @@ class PokemonEnvironment(PyboyEnvironment):
         return sum(new_state["hp"]["current"]) - sum(
             self.prior_game_stats["hp"]["current"]
         )
+
+    def _leave_battle_reward(self, new_state: dict[str, any]) -> int:
+        if (new_state["battle_type"] == 0):
+            return 1
+        return 0
+
+    def _player_defeated_reward(self, new_state: dict[str, any]) -> int:
+        if (sum(new_state["hp"]["current"]) == 0):
+            return -1
+        return 0
+
+    def _current_health_reward(self, new_state: dict[str, any]) -> int:
+        return new_state["current_pokemon_health"] - self.prior_game_stats["current_pokemon_health"]
+
+    def _enemy_health_reward(self, new_state: dict[str, any]) -> int:
+        if (new_state["battle_type"] != 0 and self.prior_game_stats["battle_type"] != 0):
+            return self.prior_game_stats["enemy_pokemon_health"] - new_state["enemy_pokemon_health"]
+        return 0
 
     def _xp_reward(self, new_state: dict[str, any]) -> int:
         return sum(new_state["xp"]) - sum(self.prior_game_stats["xp"])
