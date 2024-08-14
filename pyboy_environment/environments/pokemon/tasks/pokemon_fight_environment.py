@@ -17,7 +17,6 @@ xp_multiplier = 10
 level_up_multiplier = 1000
 
 # other params
-
 num_steps_truncate = 500
 
 class PokemonFightEnvironment(PokemonEnvironment):
@@ -38,7 +37,21 @@ class PokemonFightEnvironment(PokemonEnvironment):
 
     def _get_state(self) -> np.ndarray:
         # Implement your state retrieval logic here
-        pass
+
+        game_stats = self._generate_game_stats()
+        (state,) = [
+            game_stats["location"]["x"],
+            game_stats["location"]["y"],
+            game_stats["location"]["map_id"],
+            game_stats["battle_type"],
+            game_stats["current_pokemon_health"],
+            game_stats["enemy_pokemon_health"],
+            game_stats["party_size"],
+            game_stats["caught_pokemon"],
+            game_stats["seen_pokemon"],
+        ] + game_stats["hp"]["current"] + game_stats["hp"]["max"] + game_stats["xp"],
+
+        return state
 
     def _calculate_reward(self, new_state: dict) -> float:
         # Implement your reward calculation logic here
