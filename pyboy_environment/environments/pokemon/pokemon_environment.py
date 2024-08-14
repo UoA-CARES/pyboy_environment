@@ -67,19 +67,17 @@ class PokemonEnvironment(PyboyEnvironment):
         return len(self._get_state())
 
     @cached_property
-    def action_num(self) -> [int]:
+    def action_num(self) -> int:
         
         # Single button input at each step
         return len(self.valid_actions)
 
-    def sample_action(self) -> [int]:
+    def sample_action(self) -> list[int]:
         
         length = len(self.valid_actions)
-        array = np.zeros(length, dtype=int)
         random_index = np.random.randint(0, length)
-        array[random_index] = 1
     
-        return array
+        return random_index
 
     def _get_state(self) -> np.ndarray:
         # Implement your state retrieval logic here - compact state based representation
@@ -88,10 +86,8 @@ class PokemonEnvironment(PyboyEnvironment):
         )
 
     # TODO Implement discrete action space version of this
-    def _run_action_on_emulator(self, action_array: np.ndarray) -> None:
+    def _run_action_on_emulator(self, action_idx: int) -> None:
         # Implement your action execution logic here
-
-        action_idx = np.argmax(action_array)
 
         # Push the button for a few frames
         self.pyboy.send_input(self.valid_actions[action_idx])
