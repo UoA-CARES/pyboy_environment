@@ -20,7 +20,11 @@ class PokemonEnvironment(PyboyEnvironment):
         emulation_speed: int = 0,
         headless: bool = False,
         init_name: str = "has_pokedex.state",
+        discrete: bool = False
     ) -> None:
+        
+        self.discrete = discrete
+
         if not headless:
             self.state_display = StateDisplay()
             
@@ -69,15 +73,20 @@ class PokemonEnvironment(PyboyEnvironment):
     @cached_property
     def action_num(self) -> int:
         
-        # Single button input at each step
-        return len(self.valid_actions)
+        if (self.discrete):
+            return len(self.valid_actions)
+        else:
+            return 1
 
     def sample_action(self) -> list[int]:
         
-        length = len(self.valid_actions)
-        random_index = np.random.randint(0, length)
-    
-        return random_index
+        if (self.discrete):
+            length = len(self.valid_actions)
+            random_index = np.random.randint(0, length)
+        
+            return random_index
+        else:
+            return np.array([np.random.random()])
 
     def _get_state(self) -> np.ndarray:
         # Implement your state retrieval logic here - compact state based representation
@@ -86,17 +95,30 @@ class PokemonEnvironment(PyboyEnvironment):
         )
 
     # TODO Implement discrete action space version of this
-    def _run_action_on_emulator(self, action_idx: int) -> None:
+    def _run_action_on_emulator(self, action) -> None:
         # Implement your action execution logic here
 
+        if (self.discrete):
+            pyboy_action_idx = action
+        else:
+            value = np.clip(action[0], 0.0, 1.0)
+
+            bin_width = 1.0 / self.action_num
+
+            pyboy_action_idx = int(value // bin_width)
+
+        if pyboy_action_idx == self.action_num:
+            pyboy_action_idx = pyboy_action_idx - 1
+
         # Push the button for a few frames
-        self.pyboy.send_input(self.valid_actions[action_idx])
+        self.pyboy.send_input(self.valid_actions[pyboy_action_idx])
 
         for _ in range(self.act_freq):
             self.pyboy.tick()
 
         # Release the button
-        self.pyboy.send_input(self.release_button[action_idx])
+        self.pyboy.send_input(self.release_button[pyboy_action_idx])
+        
 
     def _generate_game_stats(self) -> dict[str, any]:
         stats = {

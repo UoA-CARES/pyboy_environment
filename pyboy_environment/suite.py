@@ -11,6 +11,7 @@ def make(
     act_freq: int,
     emulation_speed: int = 0,
     headless: bool = False,
+    discrete: bool = False,
 ) -> PyboyEnvironment:
 
     if domain == "mario":
@@ -22,7 +23,7 @@ def make(
         if task == "catch":
             env = PokemonCatch(act_freq, emulation_speed, headless)
         elif task == "fight":
-            env = PokemonFightEnvironment(act_freq, emulation_speed, headless)
+            env = PokemonFightEnvironment(act_freq, emulation_speed, headless, discrete)
         else:
             raise ValueError(f"Unknown Pokemon task: {task}")
     else:
