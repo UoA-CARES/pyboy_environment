@@ -8,6 +8,7 @@ from pyboy.utils import WindowEvent
 from pyboy_environment.environments.mario.mario_environment import MarioEnvironment
 
 
+
 class MarioRun(MarioEnvironment):
     def __init__(
         self,
@@ -16,6 +17,7 @@ class MarioRun(MarioEnvironment):
         headless: bool = False,
     ) -> None:
 
+            
         valid_actions: List[WindowEvent] = [
             # WindowEvent.PRESS_ARROW_DOWN,
             WindowEvent.PRESS_ARROW_LEFT,
