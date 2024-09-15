@@ -106,6 +106,7 @@ class PokemonEnvironment(PyboyEnvironment):
             "seen_pokemon": self._read_seen_pokemon_count(),
             "money": self._read_money(),
             "events": self._read_events(),
+            "items": self._read_items_(),
         }
         if not self.headless:
             self.state_display.update_display(stats)
@@ -242,6 +243,21 @@ class PokemonEnvironment(PyboyEnvironment):
 
     def _read_battle_type(self) -> int:
         return self._read_m(0xD057)
+
+    def _read_items_(self) -> dict:
+        total_items = self._read_m(0xD31D)
+        if (total_items == 0):
+            return {}
+
+        addr = 0xD31E
+        items = {}
+
+        for i in range(total_items):
+            item_id = self._read_m(addr + 2 * i)
+            item_count = self._read_m(addr + 2 * i + 1)
+            items[item_id] = item_count
+
+        return items
 
     def _get_enemy_pokemon_health(self) -> int:
         return self._read_hp(0xCFE6)
