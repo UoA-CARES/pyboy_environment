@@ -22,34 +22,16 @@ class PokemonCatch(PokemonEnvironment):
         act_freq: int,
         emulation_speed: int = 0,
         headless: bool = False,
+        discrete: bool = False,
     ) -> None:
-
-        # We don't include start button here because we don't need it for this task
-        valid_actions: list[WindowEvent] = [
-            WindowEvent.PRESS_ARROW_DOWN,
-            WindowEvent.PRESS_ARROW_LEFT,
-            WindowEvent.PRESS_ARROW_RIGHT,
-            WindowEvent.PRESS_ARROW_UP,
-            WindowEvent.PRESS_BUTTON_A,
-            WindowEvent.PRESS_BUTTON_B,
-        ]
-
-        release_button: list[WindowEvent] = [
-            WindowEvent.RELEASE_ARROW_DOWN,
-            WindowEvent.RELEASE_ARROW_LEFT,
-            WindowEvent.RELEASE_ARROW_RIGHT,
-            WindowEvent.RELEASE_ARROW_UP,
-            WindowEvent.RELEASE_BUTTON_A,
-            WindowEvent.RELEASE_BUTTON_B,
-        ]
 
         super().__init__(
             act_freq=act_freq,
             task="catch",
+            init_name="catch.state",
             emulation_speed=emulation_speed,
-            valid_actions=valid_actions,
-            release_button=release_button,
             headless=headless,
+            discrete=discrete,
         )
 
     def _get_state(self) -> np.ndarray:
@@ -68,7 +50,7 @@ class PokemonCatch(PokemonEnvironment):
         new_items = new_state["items"]
         old_items = self.prior_game_stats["items"]
 
-        for item, count in old_items:
+        for item, count in old_items.items():
             if item > 0x4:
                 pass
 
