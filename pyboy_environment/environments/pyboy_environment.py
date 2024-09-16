@@ -2,9 +2,17 @@ from abc import ABCMeta, abstractmethod
 from functools import cached_property
 from pathlib import Path
 
+import logging
 import cv2
 import numpy as np
 from pyboy import PyBoy
+
+import signal
+
+def sig_handler(signum, frame):
+    logging.info("Seg faulted :(")
+    logging.info(f"Seg faulted: {signum}, {frame}")
+    raise RuntimeError("Seg fault")
 
 
 class PyboyEnvironment(metaclass=ABCMeta):
@@ -21,6 +29,8 @@ class PyboyEnvironment(metaclass=ABCMeta):
         emulation_speed: int = 0,
         headless: bool = False,
     ) -> None:
+        signal.signal(signal.SIGSEGV, sig_handler)
+
         self.task = task
         self.domain = domain
 
@@ -80,19 +90,31 @@ class PyboyEnvironment(metaclass=ABCMeta):
         return self.pyboy.game_area()
 
     def step(self, action) -> tuple:
+
+        # debug-log logging.info("Logging100")
+
         self.steps += 1
 
+        # debug-log logging.info("Logging101")
+
         self._run_action_on_emulator(action)
+        # debug-log logging.info("Logging102")
 
         state = self._get_state()
+        # debug-log logging.info("Logging103")
 
         current_game_stats = self._generate_game_stats()
+        # debug-log logging.info("Logging104")
         reward = self._calculate_reward(current_game_stats)
+        # debug-log logging.info("Logging105")
 
         done = self._check_if_done(current_game_stats)
+        # debug-log logging.info("Logging106")
         truncated = self._check_if_truncated(current_game_stats)
+        # debug-log logging.info("Logging107")
 
         self.prior_game_stats = current_game_stats
+        # debug-log logging.info("Logging108")
 
         return state, reward, done, truncated
 

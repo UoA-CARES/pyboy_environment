@@ -1,4 +1,5 @@
 import random
+import logging
 from functools import cached_property
 from abc import abstractmethod
 
@@ -12,19 +13,40 @@ from pyboy_environment.environments.pyboy_environment import PyboyEnvironment
 from pyboy_environment.environments.pokemon import pokemon_constants as pkc
 
 
+
 class PokemonEnvironment(PyboyEnvironment):
     def __init__(
         self,
         act_freq: int,
-        valid_actions: list[WindowEvent],
-        release_button: list[WindowEvent],
         task: str,
         emulation_speed: int = 0,
         headless: bool = False,
         init_name: str = "has_pokedex.state",
+        discrete: bool = False
     ) -> None:
+        
+        self.discrete = discrete
+
         if not headless:
             self.state_display = StateDisplay()
+            
+        valid_actions: list[WindowEvent] = [
+            WindowEvent.PRESS_ARROW_DOWN,
+            WindowEvent.PRESS_ARROW_LEFT,
+            WindowEvent.PRESS_ARROW_RIGHT,
+            WindowEvent.PRESS_ARROW_UP,
+            WindowEvent.PRESS_BUTTON_A,
+            WindowEvent.PRESS_BUTTON_B,
+        ]
+
+        release_button: list[WindowEvent] = [
+            WindowEvent.RELEASE_ARROW_DOWN,
+            WindowEvent.RELEASE_ARROW_LEFT,
+            WindowEvent.RELEASE_ARROW_RIGHT,
+            WindowEvent.RELEASE_ARROW_UP,
+            WindowEvent.RELEASE_BUTTON_A,
+            WindowEvent.RELEASE_BUTTON_B,
+        ]
 
         super().__init__(
             task=task,
@@ -52,12 +74,21 @@ class PokemonEnvironment(PyboyEnvironment):
 
     @cached_property
     def action_num(self) -> int:
-        # Single button input at each step
-        # No requirement for multiple buttons to be pressed at once like Mario
-        return 1
+        
+        if (self.discrete):
+            return len(self.valid_actions)
+        else:
+            return 1
 
-    def sample_action(self) -> int:
-        return random.uniform(0, 1)
+    def sample_action(self) -> list[int]:
+        
+        if (self.discrete):
+            length = len(self.valid_actions)
+            random_index = np.random.randint(0, length)
+        
+            return random_index
+        else:
+            return np.array([np.random.random()])
 
     def _get_state(self) -> np.ndarray:
         # Implement your state retrieval logic here - compact state based representation
@@ -66,27 +97,54 @@ class PokemonEnvironment(PyboyEnvironment):
         )
 
     # TODO Implement discrete action space version of this
-    def _run_action_on_emulator(self, action_array: np.ndarray) -> None:
+    def _run_action_on_emulator(self, action) -> None:
         # Implement your action execution logic here
+        # debug-log logging.info("Logging111")
 
-        action = action_array[0]
-        action = min(action, 0.99)
+        if (self.discrete):
+            # debug-log logging.info("Logging112")
+            pyboy_action_idx = action
+            # debug-log logging.info("Logging113")
+        else:
+            # debug-log logging.info("Logging114")
+            value = np.clip(action[0], 0.0, 0.9999999)
 
-        # Continuous Action is a float between 0 - 1 from Value based methods
-        # We need to convert this to an action that the emulator can understand
-        bins = np.linspace(0, 1, len(self.valid_actions) + 1)
-        button = np.digitize(action, bins) - 1
+            # debug-log logging.info("Logging115")
+            bin_width = 1.0 / len(self.valid_actions)
+            # debug-log logging.info("Logging116")
 
+            pyboy_action_idx = int(value // bin_width)
+
+        # debug-log logging.info("Logging117")
+        if pyboy_action_idx >= len(self.valid_actions):
+            # debug-log logging.info("Logging118")
+            pyboy_action_idx = len(self.valid_actions) - 1
+
+        # debug-log logging.info(f"Logging119 action {pyboy_action_idx}")
         # Push the button for a few frames
-        self.pyboy.send_input(self.valid_actions[button])
-
+        self.pyboy.send_input(self.valid_actions[pyboy_action_idx])
+        # debug-log logging.info("Logging120")
         for _ in range(self.act_freq):
-            self.pyboy.tick()
-
+            # debug-log logging.info("Logging121")
+            attempts = 0
+            while (attempts < 10):
+                # debug-log logging.info("Logging200")
+                try:
+                    # debug-log logging.info("Logging201")
+                    self.pyboy.tick()
+                    # debug-log logging.info("Logging202")
+                    break
+                except:
+                    logging.info("Failed to tick...")
+            # debug-log logging.info("Logging123")
         # Release the button
-        self.pyboy.send_input(self.release_button[button])
+        # debug-log logging.info("Logging122")
+        self.pyboy.send_input(self.release_button[pyboy_action_idx])
+        # debug-log logging.info("Logging123")
+        
 
     def _generate_game_stats(self) -> dict[str, any]:
+        # debug-log logging.info("Logging124")
         stats = {
             "location": self._get_location(),
             "battle_type": self._read_battle_type(),
@@ -108,8 +166,11 @@ class PokemonEnvironment(PyboyEnvironment):
             "events": self._read_events(),
             "items": self._read_items_(),
         }
+        # debug-log logging.info("Logging125")
         if not self.headless:
+            # debug-log logging.info("Logging126")
             self.state_display.update_display(stats)
+            # debug-log logging.info("Logging127")
         return stats
 
     @abstractmethod
