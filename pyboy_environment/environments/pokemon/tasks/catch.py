@@ -10,11 +10,12 @@ from pyboy_environment.environments.pokemon import pokemon_constants as pkc
 
 # rewards
 do_nothing_base = -1
-start_battle_reward = 100
+start_battle_reward = 10
 pokeball_thrown_multiplier = 100
 caught_multiplier = 500
+bought_pokeball_multiplier = 100
 
-num_steps_truncate = 500
+num_steps_truncate = 1000
 
 class PokemonCatch(PokemonEnvironment):
     def __init__(
@@ -28,7 +29,7 @@ class PokemonCatch(PokemonEnvironment):
         super().__init__(
             act_freq=act_freq,
             task="catch",
-            init_name="catch.state",
+            init_name="outside_pokemart.state",
             emulation_speed=emulation_speed,
             headless=headless,
             discrete=discrete,
@@ -44,22 +45,27 @@ class PokemonCatch(PokemonEnvironment):
         reward += self._start_battle_reward(new_state)
         reward += pokeball_thrown_multiplier * self._pokeball_thrown_reward(new_state)
         reward += caught_multiplier * self._caught_reward(new_state)
+        reward += bought_pokeball_multiplier * self._bought_pokeball_reward(new_state)
         return reward
 
     def _pokeball_thrown_reward(self, new_state) -> int:
-        new_items = new_state["items"]
-        old_items = self.prior_game_stats["items"]
+        previous_count = self._get_pokeball_count(self.prior_game_stats["items"])
+        new_count = self._get_pokeball_count(new_state["items"])
 
-        for item, count in old_items.items():
-            if item > 0x4:
-                pass
 
-            if item not in new_items:
-                return 1
-            elif (count - new_items[item] != 0):
-                return 1
+        if previous_count > new_count:
+            return 1
+        else:
+            return 0
 
-        return 0
+    def _bought_pokeball_reward(self, new_state) -> int:
+        previous_count = self._get_pokeball_count(self.prior_game_stats["items"])
+        new_count = self._get_pokeball_count(new_state["items"])
+
+        if new_count > previous_count:
+            return 1
+        else:
+            return 0
 
     def _start_battle_reward(self, new_state) -> int:
         if (new_state["battle_type"] != 0 and self.prior_game_stats["battle_type"] == 0):
@@ -67,18 +73,20 @@ class PokemonCatch(PokemonEnvironment):
         return 0
 
     def _check_if_done(self, game_stats: dict[str, any]) -> bool:
-        # Setting done to true if agent beats first gym (temporary)
-        return game_stats["party_size"] > self.prior_game_stats["party_size"]
+        return False
+
+    def _get_pokeball_count(self, items) -> int:
+        total_count = 0
+
+        # Iterate through the dictionary of items the player (keys) has and their counts (values)
+        for itemId, count in items.items():
+        # Iterate through the types of Pokeballs. If the item (key) matches any of the Pokeball type ids, add the count to the total number of Pokeballs
+            if itemId in range(0x0, 0x5):
+                total_count += count
+        
+        return total_count
+
 
     def _check_if_truncated(self, game_stats: dict) -> bool:
         # Implement your truncation check logic here
-
-        items = game_stats["items"]
-        no_balls = True
-
-        for i in range(0x0, 0x5):
-            if i in items:
-                no_balls = False
-
-            # Maybe if we run out of pokeballs...? or a max step count
-        return no_balls or self.steps >= num_steps_truncate
+        return self.steps >= num_steps_truncate

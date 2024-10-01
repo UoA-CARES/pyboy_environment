@@ -19,7 +19,7 @@ level_up_multiplier = 1000
 # other params
 num_steps_truncate = 500
 
-class PokemonFightEnvironment(PokemonEnvironment):
+class PokemonFight(PokemonEnvironment):
     def __init__(
         self,
         act_freq: int,
