@@ -48,6 +48,15 @@ class PokemonEnvironment(PyboyEnvironment):
             WindowEvent.RELEASE_BUTTON_B,
         ]
 
+        action_names = [
+            "Down",
+            "Left",
+            "Right",
+            "Up",
+            "A",
+            "B"
+        ]
+
         super().__init__(
             task=task,
             rom_name="PokemonRed.gb",
@@ -58,6 +67,7 @@ class PokemonEnvironment(PyboyEnvironment):
             valid_actions=valid_actions,
             release_button=release_button,
             headless=headless,
+            action_names=action_names
         )
 
     @cached_property
@@ -214,6 +224,60 @@ class PokemonEnvironment(PyboyEnvironment):
         if self._is_grass_tile():
             return 1
         return 0
+
+    def _pokeball_thrown_reward(self, new_state) -> int:
+        previous_count = self._get_pokeball_count(self.prior_game_stats["items"])
+        new_count = self._get_pokeball_count(new_state["items"])
+
+
+        if previous_count > new_count:
+            return 1
+        else:
+            return 0
+
+    def _bought_pokeball_reward(self, new_state) -> int:
+        previous_count = self._get_pokeball_count(self.prior_game_stats["items"])
+        new_count = self._get_pokeball_count(new_state["items"])
+
+        if new_count > previous_count:
+            return 1
+        else:
+            return 0
+
+    def _start_battle_reward(self, new_state) -> int:
+        if (new_state["battle_type"] != 0 and self.prior_game_stats["battle_type"] == 0):
+            return start_battle_reward
+        return 0
+
+    def _pokeball_thrown_reward(self, new_state) -> int:
+        previous_count = self._get_pokeball_count(self.prior_game_stats["items"])
+        new_count = self._get_pokeball_count(new_state["items"])
+
+
+        if previous_count > new_count:
+            return 1
+        else:
+            return 0
+
+    def _bought_pokeball_reward(self, new_state) -> int:
+        previous_count = self._get_pokeball_count(self.prior_game_stats["items"])
+        new_count = self._get_pokeball_count(new_state["items"])
+
+        if new_count > previous_count:
+            return 1
+        else:
+            return 0
+
+    def _get_pokeball_count(self, items) -> int:
+        total_count = 0
+
+        # Iterate through the dictionary of items the player (keys) has and their counts (values)
+        for itemId, count in items.items():
+        # Iterate through the types of Pokeballs. If the item (key) matches any of the Pokeball type ids, add the count to the total number of Pokeballs
+            if itemId in range(0x0, 0x5):
+                total_count += count
+        
+        return total_count
 
     def _read_party_id(self) -> list[int]:
         # https://github.com/pret/pokered/blob/91dc3c9f9c8fd529bb6e8307b58b96efa0bec67e/constants/pokemon_constants.asm

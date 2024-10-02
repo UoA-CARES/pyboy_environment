@@ -26,6 +26,7 @@ class PyboyEnvironment(metaclass=ABCMeta):
         act_freq: int,
         valid_actions: list,
         release_button: list,
+        action_names: list,
         emulation_speed: int = 0,
         headless: bool = False,
     ) -> None:
@@ -43,6 +44,8 @@ class PyboyEnvironment(metaclass=ABCMeta):
         self.valid_actions = valid_actions
 
         self.release_button = release_button
+
+        self.action_names = action_names
 
         self.act_freq = act_freq
 
@@ -78,6 +81,9 @@ class PyboyEnvironment(metaclass=ABCMeta):
         self.prior_game_stats = self._generate_game_stats()
 
         return self._get_state()
+    
+    def action_as_string(self, action):
+        return self.action_names[action]
 
     def grab_frame(self, height: int = 240, width: int = 300) -> np.ndarray:
         frame = np.array(self.screen.image)
