@@ -28,41 +28,54 @@ pokeball_thrown_multiplier = 100
 caught_multiplier = 500
 bought_pokeball_multiplier = 100
 
-uniqueness_multiplier = 0.2 
+uniqueness_multiplier = 0.1
 
 # Outside Pokemart: x:29, y:23
-class GoToLocation():
-    def __init__(self, pokemon_env: PokemonEnvironment, location):
+
+class GoToPokemart():
+    def __init__(self, pokemon_env: PokemonEnvironment):
         self.pokemon = pokemon_env
-        self.target_location = location
         game_stats = self.pokemon._generate_game_stats()
-        self.previous_distance = self._get_distance(game_stats)
-        self.name = f"Go to {location['x']}, {location['y']}"
-
-    def _get_distance(self, game_stats):
-
-        current_location = game_stats["location"]
-
-        if current_location["map_id"] != self.target_location["map_id"]:
-            return float("inf")
-
-        distance = math.sqrt((current_location['x'] - self.target_location['x'])**2 + (current_location['y'] - self.target_location['y'])**2)
-        return distance
+        self.name = f"GoToPokemart"
+        self.map_id_lowest_y_vals = {}
+        self.prev_dist = 0
 
     def get_reward(self, game_stats):
-        return -min(self._get_distance(game_stats), 100)
+        prev_location = self.pokemon.prior_game_stats["location"]
+        current_location = game_stats["location"]
 
+        reward = 0
+
+        current_y_val = current_location["y"]
+        map_id = current_location["map_id"]
+        dist_from_target = (abs(29 - current_location["x"]) + abs(23 - current_location["y"]))
+
+        if map_id == 1:
+            diff = self.prev_dist - dist_from_target
+            return diff * 30
+        else:
+            min_y_value_on_this_map = self.map_id_lowest_y_vals.get(map_id, 1000)
+
+            if current_y_val < min_y_value_on_this_map:
+                reward += 30
+                self.map_id_lowest_y_vals[map_id] = current_y_val
+            
+        self.prev_dist = dist_from_target
+        
+        return reward
+    
     def is_done(self, game_stats):
-        dist = self._get_distance(game_stats)
-        return dist < 5.0
+        current_location = game_stats["location"]
+        distance = abs(29 - current_location["x"]) + abs(23 - current_location["y"])
+
+        return distance < 2 and current_location["map_id"] == 1
+        
 
 class Explore():
     def __init__(self, pokemon_env: PokemonEnvironment):
         self.pokemon = pokemon_env
-        self.target_location = location
         game_stats = self.pokemon._generate_game_stats()
-        self.previous_distance = self._get_distance(game_stats)
-        self.name = f"Go to {location['x']}, {location['y']} (id: {location['map_id']})"
+        self.name = f"Explore"
 
         self.image_manager = ImageStorage()
 
@@ -72,7 +85,7 @@ class Explore():
 
         uniqueness = (self.image_manager.add_image(np.mean(frame, axis=2))) * uniqueness_multiplier 
 
-        if (uniqueness > 10.0):
+        if (uniqueness > 1.0):
             return uniqueness
         else:
             return 0
@@ -96,9 +109,10 @@ class PurchasePokeballs():
         self.pokemon._get_pokeball_count(game_stats["items"]) > 4
 
 class CatchPokemon():
-    def __init__(self, pokemon_env: PokemonEnvironment) -> None:
+    def __init__(self, pokemon_env: PokemonEnvironment, target_party_size) -> None:
         self.name = "Catch Pokemon"
         self.pokemon = pokemon_env
+        self.target_party_size = target_party_size
 
     def get_reward(self, game_stats):
 
@@ -111,7 +125,7 @@ class CatchPokemon():
         return reward
     
     def is_done(self, game_stats):
-        return False
+        return game_stats["party_size"] > self.target_party_size
 
 
 class LevelUpPokemon():
@@ -168,11 +182,15 @@ class PokemonBrock(PokemonEnvironment):
     def _calculate_reward(self, new_state: dict) -> float:
         
         current_task = self.tasks[self.task_index]
-        reward = current_task.get_reward(new_state)
 
-        # Need to incorporate task index in new_state somehow
+        reward = do_nothing_base
+        reward += current_task.get_reward(new_state)
+        reward += self.explore_task.get_reward(new_state)
+
         if (current_task.is_done(new_state)):
-            reward += 1000
+            with open(f"task_index_{self.task_index}.state", "wb") as f:
+                self.pyboy.save_state(f)
+            reward += 300
             self.task_index += 1
             self.last_step_checkpoint = self.steps
 
@@ -180,7 +198,19 @@ class PokemonBrock(PokemonEnvironment):
 
     def reset(self):
         self.explore_task = Explore(self)
-        self.tasks = [FightPokemon]
+        self.tasks = [
+            GoToPokemart(self),
+            PurchasePokeballs(self),
+            # LevelUpPokemon(self, 7),
+            # LevelUpPokemon(self, 8),
+            # CatchPokemon(self, 2),
+            # CatchPokemon(self, 3),
+            # LevelUpPokemon(self, 4),
+            # LevelUpPokemon(self, 5),
+            # LevelUpPokemon(self, 6),
+            # LevelUpPokemon(self, 7),
+            # LevelUpPokemon(self, 8)
+        ]
 
         self.task_index = 0
         return super().reset()
