@@ -1,5 +1,7 @@
 
 
+import random
+
 
 from functools import cached_property
 
@@ -41,7 +43,6 @@ class GoToPokemart():
         self.prev_dist = 0
 
     def get_reward(self, game_stats):
-        prev_location = self.pokemon.prior_game_stats["location"]
         current_location = game_stats["location"]
 
         reward = 0
@@ -52,7 +53,7 @@ class GoToPokemart():
 
         if map_id == 1:
             diff = self.prev_dist - dist_from_target
-            reward += 30
+            reward += 30 * diff
         else:
             min_y_value_on_this_map = self.map_id_lowest_y_vals.get(map_id, 1000)
 
@@ -98,6 +99,7 @@ class PurchasePokeballs():
         self.previous_pokeball_count = self.pokemon._get_pokeball_count(stats["items"])
         self.name = f"Purchase Pokeballs"
         self.has_been_in_shop = False
+        self.had_left_shop = False
 
     def get_reward(self, game_stats):
         reward = 0
@@ -113,10 +115,14 @@ class PurchasePokeballs():
             self.has_been_in_shop = True
             reward += 300
 
+        if (self.has_been_in_shop and not is_in_shop and not self.has_left_shop):
+            self.has_left_shop = True
+            reward += 300
+
         return reward
 
     def is_done(self, game_stats):
-        self.pokemon._get_pokeball_count(game_stats["items"]) > 4
+        self.pokemon._get_pokeball_count(game_stats["items"]) > 4 and self.has_left_shop
 
 class CatchPokemon():
     def __init__(self, pokemon_env: PokemonEnvironment, target_party_size) -> None:
@@ -140,7 +146,31 @@ class CatchPokemon():
 
 class LevelUpPokemon():
     def __init__(self, pokemon_env: PokemonEnvironment, target_levels) -> None:
-        self.name = "Fight pokemon"
+        self.name = "Level Up Pokemon"
+        self.pokemon = pokemon_env
+        self.target_levels = target_levels
+
+    def get_reward(self, game_stats):
+        # Implement your reward calculation logic here
+        reward = do_nothing_base
+        reward += self.pokemon._xp_reward(game_stats) * xp_multiplier
+        reward += self.pokemon._enemy_health_reward(game_stats) * enemy_health_loss_multiplier
+        # reward += self._player_defeated_reward(new_state)
+        reward += self.pokemon._levels_reward(game_stats) * level_up_multiplier
+        reward += self.pokemon._start_battle_reward(game_stats)
+        return reward
+    
+    def is_done(self, game_stats):
+        levels = game_stats["levels"]
+        for level in levels:
+            if level < self.target_levels and level != 0:
+                return False
+
+        return True
+    
+class FightBrock():
+    def __init__(self, pokemon_env: PokemonEnvironment, target_levels) -> None:
+        self.name = "Fight Brock"
         self.pokemon = pokemon_env
         self.target_levels = target_levels
 
@@ -171,6 +201,7 @@ class PokemonFlexiEnv(PokemonEnvironment):
         discrete: bool = False,
     ) -> None:
 
+
         super().__init__(
             act_freq=act_freq,
             task="flexi",
@@ -179,6 +210,8 @@ class PokemonFlexiEnv(PokemonEnvironment):
             headless=headless,
             discrete=discrete,
         )
+
+        self.starting_state_paths = [self.init_path]
 
         self.last_step_checkpoint = self.steps
 
@@ -200,6 +233,9 @@ class PokemonFlexiEnv(PokemonEnvironment):
         if (current_task.is_done(new_state)):
             with open(f"task_index_{self.task_index}.state", "wb") as f:
                 self.pyboy.save_state(f)
+                file_name = f.name
+                if (file_name not in self.starting_state_paths):
+                    self.starting_state_paths.append(f.name)
             reward += 300
             self.task_index += 1
             self.last_step_checkpoint = self.steps
@@ -209,20 +245,26 @@ class PokemonFlexiEnv(PokemonEnvironment):
     def reset(self):
         self.explore_task = Explore(self)
         self.tasks = [
+            LevelUpPokemon(self, 7),
+            LevelUpPokemon(self, 8),
             GoToPokemart(self),
             PurchasePokeballs(self),
-            # LevelUpPokemon(self, 7),
-            # LevelUpPokemon(self, 8),
-            # CatchPokemon(self, 2),
-            # CatchPokemon(self, 3),
-            # LevelUpPokemon(self, 4),
-            # LevelUpPokemon(self, 5),
-            # LevelUpPokemon(self, 6),
-            # LevelUpPokemon(self, 7),
-            # LevelUpPokemon(self, 8)
+            CatchPokemon(self, 2),
+            CatchPokemon(self, 3),
+            LevelUpPokemon(self, 4),
+            LevelUpPokemon(self, 5),
+            LevelUpPokemon(self, 6),
+            LevelUpPokemon(self, 7),
+            LevelUpPokemon(self, 8)
         ]
-
+        
         self.task_index = 0
+
+        if (not hasattr(self, "starting_state_paths")):
+            self.starting_state_paths = [self.init_path]
+
+        # Picks a random starting state from existing save points
+        self.init_path = random.choice(self.starting_state_paths)
         return super().reset()
 
     def _check_if_done(self, game_stats: dict[str, any]) -> bool:
