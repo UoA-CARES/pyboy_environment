@@ -13,6 +13,15 @@ from pyboy_environment.environments.pyboy_environment import PyboyEnvironment
 from pyboy_environment.environments.pokemon import pokemon_constants as pkc
 
 
+# rewards
+pokeball_thrown_multiplier = 100
+caught_multiplier = 500
+bought_pokeball_multiplier = 100
+do_nothing_base = -1
+start_battle_reward = 100
+enemy_health_loss_multiplier = 10
+xp_multiplier = 10
+level_up_multiplier = 1000
 
 class PokemonEnvironment(PyboyEnvironment):
     def __init__(
@@ -469,7 +478,15 @@ class PokemonEnvironment(PyboyEnvironment):
         return sum(new_state["xp"]) - sum(self.prior_game_stats["xp"])
 
     def _levels_reward(self, new_state: dict[str, any]) -> int:
-        return sum(new_state["levels"]) - sum(self.prior_game_stats["levels"])
+        total_reward = 0
+        prev_levels = self.prior_game_stats["levels"]
+        current_levels = new_state["levels"]
+        for i in range(len(prev_levels)):
+            increase = current_levels[i] - prev_levels[i]
+            ratio = float(increase) / float(prev_levels[i])
+            total_reward += ratio
+        
+        return total_reward
 
     def _badges_reward(self, new_state: dict[str, any]) -> int:
         return new_state["badges"] - self.prior_game_stats["badges"]
