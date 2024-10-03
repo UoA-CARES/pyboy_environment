@@ -2,7 +2,7 @@ from pyboy_environment.environments import PyboyEnvironment
 from pyboy_environment.environments.mario.mario_run import MarioRun
 from pyboy_environment.environments.pokemon.tasks.fight import PokemonFight
 from pyboy_environment.environments.pokemon.tasks.catch import PokemonCatch
-from pyboy_environment.environments.pokemon.tasks.brock import PokemonBrock
+from pyboy_environment.environments.pokemon.tasks.flexi import PokemonFlexiEnv
 
 
 def make(
@@ -24,8 +24,8 @@ def make(
             env = PokemonCatch(act_freq, emulation_speed, headless, discrete)
         elif task == "fight":
             env = PokemonFight(act_freq, emulation_speed, headless, discrete)
-        elif task == "brock":
-            env = PokemonBrock(act_freq, emulation_speed, headless, discrete)
+        elif task == "flexi":
+            env = PokemonFlexiEnv(act_freq, emulation_speed, headless, discrete)
         else:
             raise ValueError(f"Unknown Pokemon task: {task}")
     else:

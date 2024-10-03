@@ -1,6 +1,6 @@
 
 
-from pyboy_environment.environments.pokemon.tasks.brock import PokemonBrock
+from pyboy_environment.environments.pokemon.tasks.flexi import PokemonFlexiEnv
 from tasks.fight import PokemonFight
 
 import sys
@@ -38,7 +38,7 @@ def wait_for_input():
 
 def main():
 
-    env = PokemonBrock(act_freq=10, discrete=True)
+    env = PokemonFlexiEnv(act_freq=10, discrete=True)
 
     while(True):
         index = wait_for_input()

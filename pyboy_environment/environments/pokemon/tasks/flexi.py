@@ -162,7 +162,7 @@ class LevelUpPokemon():
 
         return True
 
-class PokemonBrock(PokemonEnvironment):
+class PokemonFlexiEnv(PokemonEnvironment):
     def __init__(
         self,
         act_freq: int,
@@ -173,7 +173,7 @@ class PokemonBrock(PokemonEnvironment):
 
         super().__init__(
             act_freq=act_freq,
-            task="brock",
+            task="flexi",
             init_name="has_pokedex.state",
             emulation_speed=emulation_speed,
             headless=headless,
