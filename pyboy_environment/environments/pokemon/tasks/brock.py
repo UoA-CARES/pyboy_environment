@@ -52,7 +52,7 @@ class GoToPokemart():
 
         if map_id == 1:
             diff = self.prev_dist - dist_from_target
-            return diff * 30
+            reward += 30
         else:
             min_y_value_on_this_map = self.map_id_lowest_y_vals.get(map_id, 1000)
 
@@ -97,13 +97,23 @@ class PurchasePokeballs():
         stats = self.pokemon._generate_game_stats()
         self.previous_pokeball_count = self.pokemon._get_pokeball_count(stats["items"])
         self.name = f"Purchase Pokeballs"
+        self.has_been_in_shop = False
 
     def get_reward(self, game_stats):
-        current_pokeball_count = self.pokemon._get_pokeball_count(game_stats["items"])
-        diff = current_pokeball_count - self.previous_pokeball_count
+        reward = 0
 
+        current_pokeball_count = self.pokemon._get_pokeball_count(game_stats["items"])
+        pokeball_count_increase = current_pokeball_count - self.previous_pokeball_count
         self.previous_pokeball_count = current_pokeball_count
-        return diff
+
+        reward += pokeball_count_increase
+
+        is_in_shop = game_stats["location"]["map_id"] == 42
+        if (not self.has_been_in_shop and is_in_shop):
+            self.has_been_in_shop = True
+            reward += 300
+
+        return reward
 
     def is_done(self, game_stats):
         self.pokemon._get_pokeball_count(game_stats["items"]) > 4
