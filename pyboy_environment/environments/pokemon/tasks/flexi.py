@@ -21,14 +21,16 @@ from pyboy_environment.environments.pokemon.helpers.unique_im import ImageStorag
 # rewards
 
 do_nothing_base = -1
-start_battle_reward = 100
-enemy_health_loss_multiplier = 10
-xp_multiplier = 10
-level_up_multiplier = 1000
+start_battle_multiplier = 100
+enemy_health_loss_multiplier = 20
+own_health_loss_multiplier = 10
+xp_multiplier = 1
+level_up_multiplier = 100
 
 pokeball_thrown_multiplier = 100
-caught_multiplier = 500
+pokemon_caught_multiplier = 500
 bought_pokeball_multiplier = 100
+enter_gym_multiplier = 100
 
 uniqueness_multiplier = 0.1
 
@@ -134,10 +136,10 @@ class CatchPokemon():
 
         # Implement your reward calculation logic here
         reward = do_nothing_base
-        reward += self._start_battle_reward(game_stats)
-        reward += pokeball_thrown_multiplier * self._pokeball_thrown_reward(game_stats)
-        reward += caught_multiplier * self._caught_reward(game_stats)
-        reward += bought_pokeball_multiplier * self._bought_pokeball_reward(game_stats)
+        reward += self.pokemon._start_battle_reward(game_stats) * start_battle_multiplier
+        reward += self.pokemon._pokeball_thrown_reward(game_stats) * pokeball_thrown_multiplier
+        reward += self.pokemon._caught_reward(game_stats) * pokemon_caught_multiplier
+        reward += self.pokemon._bought_pokeball_reward(game_stats) * bought_pokeball_multiplier 
         return reward
     
     def is_done(self, game_stats):
@@ -153,11 +155,11 @@ class LevelUpPokemon():
     def get_reward(self, game_stats):
         # Implement your reward calculation logic here
         reward = do_nothing_base
-        reward += self.pokemon._xp_reward(game_stats) * xp_multiplier
+        reward += self.pokemon._xp_increase_reward(game_stats) * xp_multiplier
         reward += self.pokemon._enemy_health_decrease_reward(game_stats) * enemy_health_loss_multiplier
         # reward += self._player_defeated_reward(new_state)
-        reward += self.pokemon._levels_reward(game_stats) * level_up_multiplier
-        reward += self.pokemon._start_battle_reward(game_stats)
+        reward += self.pokemon._levels_increase_reward(game_stats) * level_up_multiplier
+        reward += self.pokemon._start_battle_reward(game_stats) * start_battle_multiplier
         return reward
     
     def is_done(self, game_stats):
@@ -169,28 +171,32 @@ class LevelUpPokemon():
         return True
     
 class FightBrock():
-    def __init__(self, pokemon_env: PokemonEnvironment, target_levels) -> None:
+    def __init__(self, pokemon_env: PokemonEnvironment) -> None:
         self.name = "Fight Brock"
         self.pokemon = pokemon_env
-        self.target_levels = target_levels
+        self.has_been_in_gym = False
 
     def get_reward(self, game_stats):
         # Implement your reward calculation logic here
         reward = do_nothing_base
-        reward += self.pokemon._xp_reward(game_stats) * xp_multiplier
-        reward += self.pokemon._enemy_health_reward(game_stats) * enemy_health_loss_multiplier
-        # reward += self._player_defeated_reward(new_state)
-        reward += self.pokemon._levels_reward(game_stats) * level_up_multiplier
-        reward += self.pokemon._start_battle_reward(game_stats)
+
+        map_id = game_stats["location"]["map_id"]
+
+        if not self.has_been_in_gym and map_id == 54:
+            self.has_been_in_gym = True
+            reward += enter_gym_multiplier
+
+        reward += self.pokemon._start_battle_reward(game_stats, battle_type=2) * start_battle_multiplier
+        reward += self.pokemon._xp_increase_reward(game_stats) * xp_multiplier
+        reward += self.pokemon._enemy_health_decrease_reward(game_stats) * enemy_health_loss_multiplier
+        reward += self.pokemon._levels_increase_reward(game_stats) * level_up_multiplier
+
+        reward += self.pokemon._own_pokemon_health_decrease_punishment(game_stats) * own_health_loss_multiplier
+        reward += self.pokemon._player_defeated_punishment(game_stats)
         return reward
     
     def is_done(self, game_stats):
-        levels = game_stats["levels"]
-        for level in levels:
-            if level < self.target_levels and level != 0:
-                return False
-
-        return True
+        return self.pokemon._get_badge_count() > 0
 
 class PokemonFlexiEnv(PokemonEnvironment):
     def __init__(
@@ -205,7 +211,7 @@ class PokemonFlexiEnv(PokemonEnvironment):
         super().__init__(
             act_freq=act_freq,
             task="flexi",
-            init_name="has_pokedex.state",
+            init_name="caught_three_pokemon_outside_gym.state",
             emulation_speed=emulation_speed,
             headless=headless,
             discrete=discrete,
@@ -245,17 +251,7 @@ class PokemonFlexiEnv(PokemonEnvironment):
     def reset(self):
         self.explore_task = Explore(self)
         self.tasks = [
-            LevelUpPokemon(self, 7),
-            LevelUpPokemon(self, 8),
-            GoToPokemart(self),
-            PurchasePokeballs(self),
-            CatchPokemon(self, 2),
-            CatchPokemon(self, 3),
-            LevelUpPokemon(self, 4),
-            LevelUpPokemon(self, 5),
-            LevelUpPokemon(self, 6),
-            LevelUpPokemon(self, 7),
-            LevelUpPokemon(self, 8)
+            FightBrock(self)
         ]
         
         self.task_index = 0
@@ -272,4 +268,4 @@ class PokemonFlexiEnv(PokemonEnvironment):
 
     def _check_if_truncated(self, game_stats: dict) -> bool:
         # Implement your truncation check logic here
-        return self.steps - self.last_step_checkpoint >= 500
+        return self.steps - self.last_step_checkpoint >= 900

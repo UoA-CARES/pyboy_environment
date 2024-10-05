@@ -167,8 +167,6 @@ class PokemonEnvironment(PyboyEnvironment):
         self.pyboy.send_input(self.release_button[pyboy_action_idx])
         # debug-log logging.info("Logging123")
         
-
-
     @abstractmethod
     def _calculate_reward(self, new_state: dict) -> float:
         # Implement your reward calculation logic here
@@ -176,11 +174,11 @@ class PokemonEnvironment(PyboyEnvironment):
 
     def _check_if_done(self, game_stats: dict[str, any]) -> bool:
         # Setting done to true if agent beats first gym (temporary)
-        return game_stats["badges"] > 0
+        pass
 
     def _check_if_truncated(self, game_stats: dict) -> bool:
         # Implement your truncation check logic here
-        return False
+        pass
 
     ##################################################################################
     ############################# MEMORY READING HELPERS #############################
@@ -191,6 +189,7 @@ class PokemonEnvironment(PyboyEnvironment):
         stats = {
             "location": self._get_location(),
             "battle_type": self._read_battle_type(),
+            "current_pokemon_id": self._get_active_pokemon_id(),
             "current_pokemon_health": self._get_current_pokemon_health(),
             "enemy_pokemon_health": self._get_enemy_pokemon_health(),
             "party_size": self._get_party_size(),
@@ -355,6 +354,9 @@ class PokemonEnvironment(PyboyEnvironment):
 
         return items
 
+    def _get_active_pokemon_id(self) -> int:
+        return self._read_m(0xD014)
+
     def _get_enemy_pokemon_health(self) -> int:
         return self._read_hp(0xCFE6)
 
@@ -425,7 +427,7 @@ class PokemonEnvironment(PyboyEnvironment):
             return 1
         return 0
 
-    def _player_defeated_reward(self, new_state: dict[str, any]) -> int:
+    def _player_defeated_punishment(self, new_state: dict[str, any]) -> int:
         if (sum(new_state["hp"]["current"]) == 0):
             return -1
         return 0
@@ -435,13 +437,33 @@ class PokemonEnvironment(PyboyEnvironment):
 
     def _enemy_health_decrease_reward(self, new_state: dict[str, any]) -> int:
         if (new_state["battle_type"] != 0 and self.prior_game_stats["battle_type"] != 0):
-            return self.prior_game_stats["enemy_pokemon_health"] - new_state["enemy_pokemon_health"]
+            previous_health = self.prior_game_stats["enemy_pokemon_health"]
+            current_health = new_state["enemy_pokemon_health"]
+
+            health_decrease = previous_health - current_health
+            
+            return max(0, health_decrease) # Doesn't punish when enemy health goes up
         return 0
 
-    def _xp_reward(self, new_state: dict[str, any]) -> int:
+    def _own_pokemon_health_decrease_punishment(self, new_state: dict[str, any]) -> int:
+
+        if (new_state["battle_type"] == 0 or self.prior_game_stats["battle_type"] == 0):
+            return 0
+        
+        if (new_state["current_pokemon_id"] != self.prior_game_stats["current_pokemon_id"]):
+            return 0
+
+        previous_health = self.prior_game_stats["current_pokemon_health"]
+        current_health = new_state["current_pokemon_health"]
+
+        health_decrease = previous_health - current_health
+        
+        return -health_decrease # negative as this is a punishment
+
+    def _xp_increase_reward(self, new_state: dict[str, any]) -> int:
         return sum(new_state["xp"]) - sum(self.prior_game_stats["xp"])
 
-    def _levels_reward(self, new_state: dict[str, any]) -> int:
+    def _levels_increase_reward(self, new_state: dict[str, any]) -> int:
         total_reward = 0
         prev_levels = self.prior_game_stats["levels"]
         current_levels = new_state["levels"]
@@ -488,8 +510,8 @@ class PokemonEnvironment(PyboyEnvironment):
         else:
             return 0
 
-    def _start_battle_reward(self, new_state) -> int:
-        if (new_state["battle_type"] != 0 and self.prior_game_stats["battle_type"] == 0):
+    def _start_battle_reward(self, new_state, battle_type=1) -> int:
+        if (new_state["battle_type"] == battle_type and self.prior_game_stats["battle_type"] == 0):
             return 1
         return 0
 

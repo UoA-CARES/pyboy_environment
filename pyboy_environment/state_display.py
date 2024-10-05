@@ -5,8 +5,9 @@ class StateDisplay:
         self.tk = Tk()
 
         self.tk.title('State Display')
-        self.tk.geometry("1200x1200")
+        self.tk.geometry("900x300")
         self.tk.resizable(True, True)
+        self.tk.attributes("-topmost", True)
 
         self.frame = Frame(self.tk)
         self.frame.pack(fill=BOTH, expand=True)
