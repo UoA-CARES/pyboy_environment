@@ -154,7 +154,7 @@ class LevelUpPokemon():
         # Implement your reward calculation logic here
         reward = do_nothing_base
         reward += self.pokemon._xp_reward(game_stats) * xp_multiplier
-        reward += self.pokemon._enemy_health_reward(game_stats) * enemy_health_loss_multiplier
+        reward += self.pokemon._enemy_health_decrease_reward(game_stats) * enemy_health_loss_multiplier
         # reward += self._player_defeated_reward(new_state)
         reward += self.pokemon._levels_reward(game_stats) * level_up_multiplier
         reward += self.pokemon._start_battle_reward(game_stats)

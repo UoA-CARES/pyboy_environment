@@ -45,7 +45,7 @@ class PokemonFight(PokemonEnvironment):
         # Implement your reward calculation logic here
         reward = do_nothing_base
         reward += self._xp_reward(new_state) * xp_multiplier
-        reward += self._enemy_health_reward(new_state) * enemy_health_loss_multiplier
+        reward += self._enemy_health_decrease_reward(new_state) * enemy_health_loss_multiplier
         # reward += self._player_defeated_reward(new_state)
         reward += self._levels_reward(new_state) * level_up_multiplier
         reward += self._start_battle_reward(new_state)

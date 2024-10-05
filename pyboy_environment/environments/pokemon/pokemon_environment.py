@@ -13,16 +13,6 @@ from pyboy_environment.environments.pyboy_environment import PyboyEnvironment
 from pyboy_environment.environments.pokemon import pokemon_constants as pkc
 
 
-# rewards
-pokeball_thrown_multiplier = 100
-caught_multiplier = 500
-bought_pokeball_multiplier = 100
-do_nothing_base = -1
-start_battle_reward = 100
-enemy_health_loss_multiplier = 10
-xp_multiplier = 10
-level_up_multiplier = 1000
-
 class PokemonEnvironment(PyboyEnvironment):
     def __init__(
         self,
@@ -78,6 +68,10 @@ class PokemonEnvironment(PyboyEnvironment):
             headless=headless,
             action_names=action_names
         )
+
+    ##################################################################################
+    ############################## ENVIRONMENT CONTRACT ##############################
+    ##################################################################################
 
     @cached_property
     def min_action_value(self) -> float:
@@ -174,6 +168,24 @@ class PokemonEnvironment(PyboyEnvironment):
         # debug-log logging.info("Logging123")
         
 
+
+    @abstractmethod
+    def _calculate_reward(self, new_state: dict) -> float:
+        # Implement your reward calculation logic here
+        pass
+
+    def _check_if_done(self, game_stats: dict[str, any]) -> bool:
+        # Setting done to true if agent beats first gym (temporary)
+        return game_stats["badges"] > 0
+
+    def _check_if_truncated(self, game_stats: dict) -> bool:
+        # Implement your truncation check logic here
+        return False
+
+    ##################################################################################
+    ############################# MEMORY READING HELPERS #############################
+    ##################################################################################
+
     def _generate_game_stats(self) -> dict[str, any]:
         # debug-log logging.info("Logging124")
         stats = {
@@ -204,19 +216,6 @@ class PokemonEnvironment(PyboyEnvironment):
             # debug-log logging.info("Logging127")
         return stats
 
-    @abstractmethod
-    def _calculate_reward(self, new_state: dict) -> float:
-        # Implement your reward calculation logic here
-        pass
-
-    def _check_if_done(self, game_stats: dict[str, any]) -> bool:
-        # Setting done to true if agent beats first gym (temporary)
-        return game_stats["badges"] > 0
-
-    def _check_if_truncated(self, game_stats: dict) -> bool:
-        # Implement your truncation check logic here
-        return False
-
     def _get_location(self) -> dict[str, any]:
         x_pos = self._read_m(0xD362)
         y_pos = self._read_m(0xD361)
@@ -239,55 +238,6 @@ class PokemonEnvironment(PyboyEnvironment):
         grass_tile_index = self._read_m(0xD535)
         player_sprite_status = self._read_m(0xC207)  # Assuming player is sprite 0
         return player_sprite_status == 0x80
-
-    # in grass reward function that returns reward
-    def _grass_reward(self, new_state: dict[str, any]) -> int:
-        if self._is_grass_tile():
-            return 1
-        return 0
-
-    def _pokeball_thrown_reward(self, new_state) -> int:
-        previous_count = self._get_pokeball_count(self.prior_game_stats["items"])
-        new_count = self._get_pokeball_count(new_state["items"])
-
-
-        if previous_count > new_count:
-            return 1
-        else:
-            return 0
-
-    def _bought_pokeball_reward(self, new_state) -> int:
-        previous_count = self._get_pokeball_count(self.prior_game_stats["items"])
-        new_count = self._get_pokeball_count(new_state["items"])
-
-        if new_count > previous_count:
-            return 1
-        else:
-            return 0
-
-    def _start_battle_reward(self, new_state) -> int:
-        if (new_state["battle_type"] != 0 and self.prior_game_stats["battle_type"] == 0):
-            return start_battle_reward
-        return 0
-
-    def _pokeball_thrown_reward(self, new_state) -> int:
-        previous_count = self._get_pokeball_count(self.prior_game_stats["items"])
-        new_count = self._get_pokeball_count(new_state["items"])
-
-
-        if previous_count > new_count:
-            return 1
-        else:
-            return 0
-
-    def _bought_pokeball_reward(self, new_state) -> int:
-        previous_count = self._get_pokeball_count(self.prior_game_stats["items"])
-        new_count = self._get_pokeball_count(new_state["items"])
-
-        if new_count > previous_count:
-            return 1
-        else:
-            return 0
 
     def _get_pokeball_count(self, items) -> int:
         total_count = 0
@@ -455,7 +405,9 @@ class PokemonEnvironment(PyboyEnvironment):
                 game_area[i * 2 + 1][j * 2: j * 2 + 2] = _collision[i][j]
         return game_area
 
-    # Note: These are all examples of rewards we can calculate based on the stats, you can implement and modify your own as you please
+    ##################################################################################
+    ################################# REWARD HELPERS #################################
+    ##################################################################################
 
     def _caught_reward(self, new_state: dict[str, any]) -> int:
         return new_state["caught_pokemon"] - self.prior_game_stats["caught_pokemon"]
@@ -481,7 +433,7 @@ class PokemonEnvironment(PyboyEnvironment):
     def _current_health_reward(self, new_state: dict[str, any]) -> int:
         return new_state["current_pokemon_health"] - self.prior_game_stats["current_pokemon_health"]
 
-    def _enemy_health_reward(self, new_state: dict[str, any]) -> int:
+    def _enemy_health_decrease_reward(self, new_state: dict[str, any]) -> int:
         if (new_state["battle_type"] != 0 and self.prior_game_stats["battle_type"] != 0):
             return self.prior_game_stats["enemy_pokemon_health"] - new_state["enemy_pokemon_health"]
         return 0
@@ -510,3 +462,51 @@ class PokemonEnvironment(PyboyEnvironment):
 
     def _event_reward(self, new_state: dict[str, any]) -> int:
         return sum(new_state["events"]) - sum(self.prior_game_stats["events"])
+
+    # in grass reward function that returns reward
+    def _grass_reward(self, new_state: dict[str, any]) -> int:
+        if self._is_grass_tile():
+            return 1
+        return 0
+
+    def _pokeball_thrown_reward(self, new_state) -> int:
+        previous_count = self._get_pokeball_count(self.prior_game_stats["items"])
+        new_count = self._get_pokeball_count(new_state["items"])
+
+
+        if previous_count > new_count:
+            return 1
+        else:
+            return 0
+
+    def _bought_pokeball_reward(self, new_state) -> int:
+        previous_count = self._get_pokeball_count(self.prior_game_stats["items"])
+        new_count = self._get_pokeball_count(new_state["items"])
+
+        if new_count > previous_count:
+            return 1
+        else:
+            return 0
+
+    def _start_battle_reward(self, new_state) -> int:
+        if (new_state["battle_type"] != 0 and self.prior_game_stats["battle_type"] == 0):
+            return 1
+        return 0
+
+    def _pokeball_thrown_reward(self, new_state) -> int:
+        previous_count = self._get_pokeball_count(self.prior_game_stats["items"])
+        new_count = self._get_pokeball_count(new_state["items"])
+
+        if previous_count > new_count:
+            return 1
+        else:
+            return 0
+
+    def _bought_pokeball_reward(self, new_state) -> int:
+        previous_count = self._get_pokeball_count(self.prior_game_stats["items"])
+        new_count = self._get_pokeball_count(new_state["items"])
+
+        if new_count > previous_count:
+            return 1
+        else:
+            return 0
