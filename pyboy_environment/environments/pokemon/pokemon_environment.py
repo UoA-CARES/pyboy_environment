@@ -483,6 +483,8 @@ class PokemonEnvironment(PyboyEnvironment):
         current_levels = new_state["levels"]
         for i in range(len(prev_levels)):
             increase = current_levels[i] - prev_levels[i]
+            if (increase == 0 or prev_levels[i] == 0):
+                break
             ratio = float(increase) / float(prev_levels[i])
             total_reward += ratio
         
