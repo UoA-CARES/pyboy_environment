@@ -21,10 +21,10 @@ from pyboy_environment.environments.pokemon.helpers.unique_im import ImageStorag
 # rewards
 
 do_nothing_base = -1
-start_battle_multiplier = 200
+start_battle_multiplier = 100
 enter_gym_multiplier = 200
 enemy_health_loss_multiplier = 20
-own_health_loss_multiplier = 5
+own_health_loss_multiplier = 0
 xp_multiplier = 1
 level_up_multiplier = 100
 
@@ -211,7 +211,7 @@ class PokemonFlexiEnv(PokemonEnvironment):
         super().__init__(
             act_freq=act_freq,
             task="flexi",
-            init_name="caught_three_pokemon_outside_gym.state",
+            init_name="has_pokedex.state",
             emulation_speed=emulation_speed,
             headless=headless,
             discrete=discrete,
@@ -249,7 +249,7 @@ class PokemonFlexiEnv(PokemonEnvironment):
 
     def reset(self):
         self.tasks = [
-            FightBrock(self)
+            LevelUpPokemon(self, 10)
         ]
         
         self.task_index = 0
@@ -266,4 +266,4 @@ class PokemonFlexiEnv(PokemonEnvironment):
 
     def _check_if_truncated(self, game_stats: dict) -> bool:
         # Implement your truncation check logic here
-        return self.steps - self.last_step_checkpoint >= 900
+        return self.steps - self.last_step_checkpoint >= 500
