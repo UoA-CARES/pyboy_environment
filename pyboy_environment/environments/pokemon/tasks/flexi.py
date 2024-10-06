@@ -234,7 +234,6 @@ class PokemonFlexiEnv(PokemonEnvironment):
 
         reward = do_nothing_base
         reward += current_task.get_reward(new_state)
-        reward += self.explore_task.get_reward(new_state)
 
         if (current_task.is_done(new_state)):
             with open(f"task_index_{self.task_index}.state", "wb") as f:
@@ -249,7 +248,6 @@ class PokemonFlexiEnv(PokemonEnvironment):
         return reward
 
     def reset(self):
-        self.explore_task = Explore(self)
         self.tasks = [
             FightBrock(self)
         ]
