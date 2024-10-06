@@ -21,16 +21,16 @@ from pyboy_environment.environments.pokemon.helpers.unique_im import ImageStorag
 # rewards
 
 do_nothing_base = -1
-start_battle_multiplier = 100
+start_battle_multiplier = 200
+enter_gym_multiplier = 200
 enemy_health_loss_multiplier = 20
-own_health_loss_multiplier = 10
+own_health_loss_multiplier = 5
 xp_multiplier = 1
 level_up_multiplier = 100
 
 pokeball_thrown_multiplier = 100
 pokemon_caught_multiplier = 500
 bought_pokeball_multiplier = 100
-enter_gym_multiplier = 100
 
 uniqueness_multiplier = 0.1
 
@@ -232,7 +232,7 @@ class PokemonFlexiEnv(PokemonEnvironment):
         
         current_task = self.tasks[self.task_index]
 
-        reward = do_nothing_base
+        reward = 0
         reward += current_task.get_reward(new_state)
 
         if (current_task.is_done(new_state)):
