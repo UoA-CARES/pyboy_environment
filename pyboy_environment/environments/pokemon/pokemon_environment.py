@@ -126,24 +126,28 @@ class PokemonEnvironment(PyboyEnvironment):
         # Implement your action execution logic here
         # debug-log logging.info("Logging111")
 
-        if (self.discrete):
-            # debug-log logging.info("Logging112")
-            pyboy_action_idx = action
-            # debug-log logging.info("Logging113")
-        else:
-            # debug-log logging.info("Logging114")
-            value = np.clip(action[0], 0.0, 0.9999999)
+        try:
+            if (self.discrete):
+                # debug-log logging.info("Logging112")
+                pyboy_action_idx = action
+                # debug-log logging.info("Logging113")
+            else:
+                # debug-log logging.info("Logging114")
+                value = np.clip(action[0], 0.0, 0.9999999)
 
-            # debug-log logging.info("Logging115")
-            bin_width = 1.0 / len(self.valid_actions)
-            # debug-log logging.info("Logging116")
+                # debug-log logging.info("Logging115")
+                bin_width = 1.0 / len(self.valid_actions)
+                # debug-log logging.info("Logging116")
 
-            pyboy_action_idx = int(value // bin_width)
+                pyboy_action_idx = int(value // bin_width)
 
-        # debug-log logging.info("Logging117")
-        if pyboy_action_idx >= len(self.valid_actions):
-            # debug-log logging.info("Logging118")
-            pyboy_action_idx = len(self.valid_actions) - 1
+            # debug-log logging.info("Logging117")
+            if pyboy_action_idx >= len(self.valid_actions):
+                # debug-log logging.info("Logging118")
+                pyboy_action_idx = len(self.valid_actions) - 1
+        except:
+            logging.error(f"Failed calculate action_idx from input action {action}, using 0")
+            pyboy_action_idx = 0
 
         # debug-log logging.info(f"Logging119 action {pyboy_action_idx}")
         # Push the button for a few frames
@@ -166,6 +170,7 @@ class PokemonEnvironment(PyboyEnvironment):
         # debug-log logging.info("Logging122")
         self.pyboy.send_input(self.release_button[pyboy_action_idx])
         # debug-log logging.info("Logging123")
+        self.pyboy.tick()
         
     @abstractmethod
     def _calculate_reward(self, new_state: dict) -> float:
