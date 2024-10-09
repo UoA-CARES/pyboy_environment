@@ -23,10 +23,10 @@ from pyboy_environment.environments.pokemon.helpers.unique_im import ImageStorag
 do_nothing_base = -1
 start_battle_multiplier = 100
 enter_gym_multiplier = 200
-enemy_health_loss_multiplier = 20
+enemy_health_loss_multiplier = 10
 own_health_loss_multiplier = 0
-xp_multiplier = 1
-level_up_multiplier = 100
+xp_multiplier = 10
+level_up_multiplier = 1000
 
 pokeball_thrown_multiplier = 100
 pokemon_caught_multiplier = 500
@@ -39,7 +39,6 @@ uniqueness_multiplier = 0.1
 class GoToPokemart():
     def __init__(self, pokemon_env: PokemonEnvironment):
         self.pokemon = pokemon_env
-        game_stats = self.pokemon._generate_game_stats()
         self.name = f"GoToPokemart"
         self.map_id_lowest_y_vals = {}
         self.prev_dist = 0
@@ -249,7 +248,7 @@ class PokemonFlexiEnv(PokemonEnvironment):
 
     def reset(self):
         self.tasks = [
-            LevelUpPokemon(self, 10)
+            LevelUpPokemon(self, 20)
         ]
         
         self.task_index = 0
