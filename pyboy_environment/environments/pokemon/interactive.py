@@ -39,11 +39,13 @@ def wait_for_input():
 def main():
 
     env = PokemonFlexiEnv(act_freq=10, discrete=True)
+    steps = 0
 
     while(True):
+        steps += 1
         index = wait_for_input()
         [state, reward, done, truncated] = env.step(index)
-        print(f"\rKey: {index}, Task: {env.get_current_task().name}, Reward: {reward}, Done/Trunc: {done or truncated}\r")
+        print(f"\rKey: {index}, Steps: {steps}, Counter: {env.continue_counter}, Rate: {env.continue_subtract_rate}, Reward: {reward} ({env.reward_rolling_average_buffer.average()}), Done/Trunc: {done or truncated}\r")
 
 
 if __name__ == "__main__":

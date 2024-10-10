@@ -21,18 +21,32 @@ from pyboy_environment.environments.pokemon.helpers.unique_im import ImageStorag
 # rewards
 
 do_nothing_base = -1
-start_battle_multiplier = 100
-enter_gym_multiplier = 200
-enemy_health_loss_multiplier = 10
-own_health_loss_multiplier = 0
+start_battle_multiplier = 200
+enter_gym_multiplier = 500
+enemy_health_loss_multiplier = 50
+own_health_loss_multiplier = 10
 xp_multiplier = 10
 level_up_multiplier = 1000
 
 pokeball_thrown_multiplier = 100
-pokemon_caught_multiplier = 500
+pokemon_caught_multiplier = 300
 bought_pokeball_multiplier = 100
 
-uniqueness_multiplier = 0.1
+uniqueness_threshold = 0.1
+uniqueness_reward_multiplier = 30
+
+class CircularBuffer:
+    def __init__(self, size=50):
+        self.size = size
+        self.buffer = np.zeros(size)
+        self.index = 0
+
+    def add(self, item):
+        self.buffer[self.index] = item
+        self.index = (self.index + 1) % self.size
+
+    def average(self):
+        return np.sum(self.buffer) / self.size
 
 # Outside Pokemart: x:29, y:23
 
@@ -76,21 +90,41 @@ class GoToPokemart():
 class Explore():
     def __init__(self, pokemon_env: PokemonEnvironment):
         self.pokemon = pokemon_env
-        game_stats = self.pokemon._generate_game_stats()
         self.name = f"Explore"
 
-        self.image_manager = ImageStorage()
+        self.images = []
 
+    def reset(self):
+        self.images = []
+        
     def get_reward(self, game_stats):
 
         frame = self.pokemon.grab_frame()
 
-        uniqueness = (self.image_manager.add_image(np.mean(frame, axis=2))) * uniqueness_multiplier 
+        uniqueness = self.calculate_uniqueness(frame)
 
-        if (uniqueness > 1.0):
-            return uniqueness
+        if (uniqueness > uniqueness_threshold):
+            self.images.append(frame)
+            return uniqueness * uniqueness_reward_multiplier
         else:
             return 0
+
+    def calculate_uniqueness(self, new_image):
+        if not self.images:
+            return 1.0 # No images means it's completely unique
+
+        smallest_difference = 1.0
+
+        for img in self.images:
+            # Calculate the difference (using absolute difference)
+            diff = np.abs(new_image - img)
+            avg_pixel_difference = np.mean(diff)
+            normalised_difference = avg_pixel_difference / 256
+
+            # Get the maximum difference for this pair
+            smallest_difference = min(smallest_difference, normalised_difference)
+        
+        return smallest_difference
 
 class PurchasePokeballs():
     def __init__(self, pokemon_env: PokemonEnvironment):
@@ -126,7 +160,7 @@ class PurchasePokeballs():
         self.pokemon._get_pokeball_count(game_stats["items"]) > 4 and self.has_left_shop
 
 class CatchPokemon():
-    def __init__(self, pokemon_env: PokemonEnvironment, target_party_size) -> None:
+    def __init__(self, pokemon_env: PokemonEnvironment, target_party_size = 100) -> None:
         self.name = "Catch Pokemon"
         self.pokemon = pokemon_env
         self.target_party_size = target_party_size
@@ -134,7 +168,7 @@ class CatchPokemon():
     def get_reward(self, game_stats):
 
         # Implement your reward calculation logic here
-        reward = do_nothing_base
+        reward = 0
         reward += self.pokemon._start_battle_reward(game_stats) * start_battle_multiplier
         reward += self.pokemon._pokeball_thrown_reward(game_stats) * pokeball_thrown_multiplier
         reward += self.pokemon._caught_reward(game_stats) * pokemon_caught_multiplier
@@ -146,14 +180,14 @@ class CatchPokemon():
 
 
 class LevelUpPokemon():
-    def __init__(self, pokemon_env: PokemonEnvironment, target_levels) -> None:
+    def __init__(self, pokemon_env: PokemonEnvironment, target_levels = 100) -> None:
         self.name = "Level Up Pokemon"
         self.pokemon = pokemon_env
         self.target_levels = target_levels
 
     def get_reward(self, game_stats):
         # Implement your reward calculation logic here
-        reward = do_nothing_base
+        reward = 0
         reward += self.pokemon._xp_increase_reward(game_stats) * xp_multiplier
         reward += self.pokemon._enemy_health_decrease_reward(game_stats) * enemy_health_loss_multiplier
         # reward += self._player_defeated_reward(new_state)
@@ -177,7 +211,7 @@ class FightBrock():
 
     def get_reward(self, game_stats):
         # Implement your reward calculation logic here
-        reward = do_nothing_base
+        reward = 0
 
         map_id = game_stats["location"]["map_id"]
 
@@ -185,13 +219,15 @@ class FightBrock():
             self.has_been_in_gym = True
             reward += enter_gym_multiplier
 
-        reward += self.pokemon._start_battle_reward(game_stats, battle_type=2) * start_battle_multiplier
-        reward += self.pokemon._xp_increase_reward(game_stats) * xp_multiplier
-        reward += self.pokemon._enemy_health_decrease_reward(game_stats) * enemy_health_loss_multiplier
-        reward += self.pokemon._levels_increase_reward(game_stats) * level_up_multiplier
+        if map_id == 54:
+            reward += self.pokemon._start_battle_reward(game_stats, battle_type=2) * start_battle_multiplier
+            reward += self.pokemon._xp_increase_reward(game_stats) * xp_multiplier
+            reward += self.pokemon._enemy_health_decrease_reward(game_stats) * enemy_health_loss_multiplier
+            reward += self.pokemon._levels_increase_reward(game_stats) * level_up_multiplier
 
-        reward += self.pokemon._own_pokemon_health_decrease_punishment(game_stats) * own_health_loss_multiplier
-        reward += self.pokemon._player_defeated_punishment(game_stats)
+            reward += self.pokemon._own_pokemon_health_decrease_punishment(game_stats) * own_health_loss_multiplier
+            reward += self.pokemon._player_defeated_punishment(game_stats)
+
         return reward
     
     def is_done(self, game_stats):
@@ -206,6 +242,15 @@ class PokemonFlexiEnv(PokemonEnvironment):
         discrete: bool = False,
     ) -> None:
 
+        self.reward_rolling_average_buffer = CircularBuffer(size=50)
+
+        self.explore = Explore(self)
+        self.level_up_pokemon = LevelUpPokemon(self)
+        self.catch_pokemon = CatchPokemon(self)
+        self.fight_brock = FightBrock(self)
+        self.continue_counter = 5000
+
+        self.continue_subtract_rate = 10
 
         super().__init__(
             act_freq=act_freq,
@@ -216,53 +261,41 @@ class PokemonFlexiEnv(PokemonEnvironment):
             discrete=discrete,
         )
 
-        self.starting_state_paths = [self.init_path]
-
-        self.last_step_checkpoint = self.steps
-
-    def get_current_task(self):
-        return self.tasks[self.task_index]
-
     def _get_state(self) -> np.ndarray:
         # Implement your state retrieval logic here
         pass
 
     def _calculate_reward(self, new_state: dict) -> float:
         
-        current_task = self.tasks[self.task_index]
+        reward = -1
 
-        reward = 0
-        reward += current_task.get_reward(new_state)
+        reward += self.explore.get_reward(new_state)
+        reward += self.level_up_pokemon.get_reward(new_state)
+        reward += self.catch_pokemon.get_reward(new_state)
+        reward += self.fight_brock.get_reward(new_state)
 
-        if (current_task.is_done(new_state)):
-            with open(f"task_index_{self.task_index}.state", "wb") as f:
-                self.pyboy.save_state(f)
-                file_name = f.name
-                if (file_name not in self.starting_state_paths):
-                    self.starting_state_paths.append(f.name)
-            reward += 300
-            self.task_index += 1
-            self.last_step_checkpoint = self.steps
+        # The following algorithm essentially makes the training session cut off when the
+        # agent stops earning reward as fast for too long
+        self.reward_rolling_average_buffer.add(reward)
+
+        reward_rolling_average = self.reward_rolling_average_buffer.average()
+
+        if (reward_rolling_average > self.continue_subtract_rate):
+            self.continue_subtract_rate = reward_rolling_average
+        
+        self.continue_counter += reward
+        self.continue_counter -= self.continue_subtract_rate
 
         return reward
 
     def reset(self):
-        self.tasks = [
-            LevelUpPokemon(self, 20)
-        ]
-        
-        self.task_index = 0
-
-        if (not hasattr(self, "starting_state_paths")):
-            self.starting_state_paths = [self.init_path]
-
-        # Picks a random starting state from existing save points
-        self.init_path = random.choice(self.starting_state_paths)
+        if (hasattr(self, "explore_task")):
+            self.explore.reset()
         return super().reset()
 
     def _check_if_done(self, game_stats: dict[str, any]) -> bool:
-        return self.task_index >= len(self.tasks)
+        return self._get_badge_count() > 0
 
     def _check_if_truncated(self, game_stats: dict) -> bool:
         # Implement your truncation check logic here
-        return self.steps - self.last_step_checkpoint >= 500
+        return self.continue_counter < 0 

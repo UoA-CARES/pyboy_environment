@@ -5,6 +5,9 @@ class ImageStorage:
     def __init__(self):
         self.images = []
 
+    def reset(self):
+        self.images = []
+
     def add_image(self, new_image):
         if not isinstance(new_image, np.ndarray) or new_image.ndim != 2:
             raise ValueError("Image must be a 2D numpy array.")
