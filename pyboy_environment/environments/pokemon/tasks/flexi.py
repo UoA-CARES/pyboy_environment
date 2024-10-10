@@ -21,19 +21,19 @@ from pyboy_environment.environments.pokemon.helpers.unique_im import ImageStorag
 # rewards
 
 do_nothing_base = -1
-start_battle_multiplier = 200
-enter_gym_multiplier = 500
-enemy_health_loss_multiplier = 50
-own_health_loss_multiplier = 10
-xp_multiplier = 10
-level_up_multiplier = 1000
+start_battle_multiplier = 0
+enter_gym_multiplier = 0
+enemy_health_loss_multiplier = 0
+own_health_loss_multiplier = 0
+xp_multiplier = 30
+level_up_multiplier = 300
 
-pokeball_thrown_multiplier = 100
-pokemon_caught_multiplier = 300
+pokeball_thrown_multiplier = 0
+pokemon_caught_multiplier = 100
 bought_pokeball_multiplier = 100
 
 uniqueness_threshold = 0.1
-uniqueness_reward_multiplier = 30
+uniqueness_reward_multiplier = 5
 
 class CircularBuffer:
     def __init__(self, size=50):
@@ -250,7 +250,7 @@ class PokemonFlexiEnv(PokemonEnvironment):
         self.fight_brock = FightBrock(self)
         self.continue_counter = 5000
 
-        self.continue_subtract_rate = 10
+        self.continue_subtract_rate = 5
 
         super().__init__(
             act_freq=act_freq,
@@ -284,13 +284,20 @@ class PokemonFlexiEnv(PokemonEnvironment):
             self.continue_subtract_rate = reward_rolling_average
         
         self.continue_counter += reward
-        self.continue_counter -= self.continue_subtract_rate
+        self.continue_counter -= self.continue_subtract_rate/2
 
         return reward
 
     def reset(self):
-        if (hasattr(self, "explore_task")):
-            self.explore.reset()
+        self.reward_rolling_average_buffer = CircularBuffer(size=50)
+
+        self.explore = Explore(self)
+        self.level_up_pokemon = LevelUpPokemon(self)
+        self.catch_pokemon = CatchPokemon(self)
+        self.fight_brock = FightBrock(self)
+        self.continue_counter = 5000
+
+        self.continue_subtract_rate = 5
         return super().reset()
 
     def _check_if_done(self, game_stats: dict[str, any]) -> bool:
