@@ -211,7 +211,7 @@ class PokemonFlexiEnv(PokemonEnvironment):
         super().__init__(
             act_freq=act_freq,
             task="flexi",
-            init_name="caught_three_pokemon_outside_gym.state",
+            init_name="PokemonRed.gb.state",
             emulation_speed=emulation_speed,
             headless=headless,
             discrete=discrete,

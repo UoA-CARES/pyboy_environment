@@ -39,6 +39,7 @@ def wait_for_input():
 def main():
 
     env = PokemonFlexiEnv(act_freq=10, discrete=True)
+    env.step(3)
 
     while(True):
         index = wait_for_input()
