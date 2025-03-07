@@ -1,7 +1,6 @@
 
 
 from pyboy_environment.environments.pokemon.tasks.flexi import PokemonFlexiEnv
-from tasks.fight import PokemonFight
 
 import sys
 import termios
@@ -30,6 +29,8 @@ def wait_for_input():
             key += sys.stdin.read(2)
         
         time.sleep(0.1)
+    except:
+        return -1
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
@@ -38,11 +39,13 @@ def wait_for_input():
 
 def main():
 
-    env = PokemonFlexiEnv(act_freq=10, discrete=True)
+    env = PokemonFlexiEnv(act_freq=24, discrete=True)
     env.step(3)
 
     while(True):
         index = wait_for_input()
+        if index == -1:
+            continue
         [state, reward, done, truncated] = env.step(index)
         print(f"\rKey: {index}, Task: {env.get_current_task().name}, Reward: {reward}, Done/Trunc: {done or truncated}\r")
 

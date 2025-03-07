@@ -121,10 +121,7 @@ class PokemonEnvironment(PyboyEnvironment):
 
         return state
 
-    # TODO Implement discrete action space version of this
-    def _run_action_on_emulator(self, action) -> None:
-        # Implement your action execution logic here
-
+    def _run_action_on_emulator(self, action, actionable_ticks = 5) -> None:
         if (self.discrete):
             pyboy_action_idx = action
         else:
@@ -137,18 +134,10 @@ class PokemonEnvironment(PyboyEnvironment):
         if pyboy_action_idx >= len(self.valid_actions):
             pyboy_action_idx = len(self.valid_actions) - 1
 
-        # Push the button for a few frames
-        self.pyboy.send_input(self.valid_actions[pyboy_action_idx])
+        # Push the button for a few ticks to ensure action is registered
+        self.pyboy.button(self.action_names[pyboy_action_idx], actionable_ticks)
         for _ in range(self.act_freq):
-            attempts = 0
-            while (attempts < 10):
-                try:
-                    self.pyboy.tick()
-                    break
-                except:
-                    logging.info("Failed to tick...")
-        # Release the button
-        self.pyboy.send_input(self.release_button[pyboy_action_idx])
+            self.pyboy.tick()
         
     @abstractmethod
     def _calculate_reward(self, new_state: dict) -> float:

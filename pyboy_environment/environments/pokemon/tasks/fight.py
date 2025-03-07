@@ -39,7 +39,7 @@ class PokemonFight(PokemonEnvironment):
 
     def _get_state(self) -> np.ndarray:
         # Implement your state retrieval logic here
-        pass
+        return np.array([])
 
     def _calculate_reward(self, new_state: dict) -> float:
         # Implement your reward calculation logic here
