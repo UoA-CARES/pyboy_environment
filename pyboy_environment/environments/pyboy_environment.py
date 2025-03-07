@@ -55,6 +55,8 @@ class PyboyEnvironment(metaclass=ABCMeta):
         self.pyboy = PyBoy(
             self.rom_path,
             window=head,
+            sound_emulated=False,
+            no_input=True,
         )
 
         self.prior_game_stats = self._generate_game_stats()
@@ -97,30 +99,19 @@ class PyboyEnvironment(metaclass=ABCMeta):
 
     def step(self, action) -> tuple:
 
-        # debug-log logging.info("Logging100")
-
         self.steps += 1
 
-        # debug-log logging.info("Logging101")
-
         self._run_action_on_emulator(action)
-        # debug-log logging.info("Logging102")
 
         state = self._get_state()
-        # debug-log logging.info("Logging103")
 
         current_game_stats = self._generate_game_stats()
-        # debug-log logging.info("Logging104")
         reward = self._calculate_reward(current_game_stats)
-        # debug-log logging.info("Logging105")
 
         done = self._check_if_done(current_game_stats)
-        # debug-log logging.info("Logging106")
         truncated = self._check_if_truncated(current_game_stats)
-        # debug-log logging.info("Logging107")
 
         self.prior_game_stats = current_game_stats
-        # debug-log logging.info("Logging108")
 
         return state, reward, done, truncated
 

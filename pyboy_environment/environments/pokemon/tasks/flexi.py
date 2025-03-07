@@ -73,7 +73,6 @@ class GoToPokemart():
 
         return distance < 2 and current_location["map_id"] == 1
         
-
 class Explore():
     def __init__(self, pokemon_env: PokemonEnvironment):
         self.pokemon = pokemon_env
@@ -145,7 +144,6 @@ class CatchPokemon():
     def is_done(self, game_stats):
         return game_stats["party_size"] > self.target_party_size
 
-
 class LevelUpPokemon():
     def __init__(self, pokemon_env: PokemonEnvironment, target_levels) -> None:
         self.name = "Level Up Pokemon"
@@ -211,7 +209,7 @@ class PokemonFlexiEnv(PokemonEnvironment):
         super().__init__(
             act_freq=act_freq,
             task="flexi",
-            init_name="PokemonRed.gb.state",
+            init_name="has_pokedex.state",
             emulation_speed=emulation_speed,
             headless=headless,
             discrete=discrete,
