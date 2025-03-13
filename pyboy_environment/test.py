@@ -23,18 +23,14 @@ def key_to_action(button: int):
 
 if __name__ == "__main__":
     env = MarioRun(act_freq=6)
-    # debug-log logging.info("Logging1")
 
     print(f"{env.action_num}")
     state = env.reset()
     image = env.grab_frame()
 
-    # debug-log logging.info("Logging7")
-
     while True:
         cv2.imshow("State", image)
         key = cv2.waitKey(0)
-        # debug-log logging.info("Logging8")
 
         action = [0, 0, 0, 0]
         action[key_to_action(key)] = 1

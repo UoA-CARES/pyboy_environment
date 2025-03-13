@@ -14,4 +14,3 @@ dist/
 .idea/
 .DS_Store
 rl_logs/
-task_index_*.state

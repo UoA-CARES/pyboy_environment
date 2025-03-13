@@ -10,8 +10,6 @@ https://github.com/lixado/PyBoy-RL/blob/main/AISettings/MarioAISettings.py
 
 from abc import ABCMeta
 
-import logging
-
 import numpy as np
 from pyboy.utils import WindowEvent
 
@@ -46,7 +44,6 @@ class MarioEnvironment(PyboyEnvironment, metaclass=ABCMeta):
         return self.game_area().flatten().tolist()
 
     def _generate_game_stats(self) -> dict[str, int]:
-        # debug-log logging.info("Logging132")
         return {
             "lives": self._get_lives(),
             "score": self._get_score(),
