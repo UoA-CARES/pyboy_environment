@@ -47,8 +47,6 @@ class PokemonEnvironment(PyboyEnvironment):
             WindowEvent.RELEASE_BUTTON_B,
         ]
 
-        action_names = ["Down", "Left", "Right", "Up", "A", "B"]
-
         super().__init__(
             task=task,
             rom_name="PokemonRed.gb",
@@ -59,7 +57,6 @@ class PokemonEnvironment(PyboyEnvironment):
             valid_actions=valid_actions,
             release_button=release_button,
             headless=headless,
-            action_names=action_names,
         )
 
     ##################################################################################
