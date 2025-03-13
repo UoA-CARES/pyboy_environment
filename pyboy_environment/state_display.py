@@ -1,10 +1,11 @@
 from tkinter import *
 
+
 class StateDisplay:
     def __init__(self):
         self.tk = Tk()
 
-        self.tk.title('State Display')
+        self.tk.title("State Display")
         self.tk.geometry("900x300")
         self.tk.resizable(True, True)
         self.tk.attributes("-topmost", True)
@@ -13,7 +14,7 @@ class StateDisplay:
         self.frame.pack(fill=BOTH, expand=True)
 
         self.text_widget = Text(self.frame, wrap=WORD)
-        self.text_widget.pack(side=TOP, fill=BOTH, expand=True, anchor='n')
+        self.text_widget.pack(side=TOP, fill=BOTH, expand=True, anchor="n")
 
         self.tk.update()
 

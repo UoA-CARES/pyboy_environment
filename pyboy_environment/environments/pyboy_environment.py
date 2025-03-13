@@ -9,6 +9,7 @@ from pyboy import PyBoy
 
 import signal
 
+
 def sig_handler(signum, frame):
     logging.info("Seg faulted :(")
     logging.info(f"Seg faulted: {signum}, {frame}")
@@ -83,7 +84,7 @@ class PyboyEnvironment(metaclass=ABCMeta):
         self.prior_game_stats = self._generate_game_stats()
 
         return self._get_state()
-    
+
     def action_as_string(self, action):
         return self.action_names[action]
 

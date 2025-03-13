@@ -21,14 +21,14 @@ class PokemonEnvironment(PyboyEnvironment):
         emulation_speed: int = 0,
         headless: bool = False,
         init_name: str = "has_pokedex.state",
-        discrete: bool = False
+        discrete: bool = False,
     ) -> None:
-        
+
         self.discrete = discrete
 
         if not headless:
             self.state_display = StateDisplay()
-            
+
         valid_actions: list[WindowEvent] = [
             WindowEvent.PRESS_ARROW_DOWN,
             WindowEvent.PRESS_ARROW_LEFT,
@@ -47,14 +47,7 @@ class PokemonEnvironment(PyboyEnvironment):
             WindowEvent.RELEASE_BUTTON_B,
         ]
 
-        action_names = [
-            "Down",
-            "Left",
-            "Right",
-            "Up",
-            "A",
-            "B"
-        ]
+        action_names = ["Down", "Left", "Right", "Up", "A", "B"]
 
         super().__init__(
             task=task,
@@ -66,7 +59,7 @@ class PokemonEnvironment(PyboyEnvironment):
             valid_actions=valid_actions,
             release_button=release_button,
             headless=headless,
-            action_names=action_names
+            action_names=action_names,
         )
 
     ##################################################################################
@@ -87,18 +80,18 @@ class PokemonEnvironment(PyboyEnvironment):
 
     @cached_property
     def action_num(self) -> int:
-        
-        if (self.discrete):
+
+        if self.discrete:
             return len(self.valid_actions)
         else:
             return 1
 
     def sample_action(self) -> list[int]:
-        
-        if (self.discrete):
+
+        if self.discrete:
             length = len(self.valid_actions)
             random_index = np.random.randint(0, length)
-        
+
             return random_index
         else:
             return np.array([np.random.random()])
@@ -107,22 +100,27 @@ class PokemonEnvironment(PyboyEnvironment):
         # Implement your state retrieval logic here - compact state based representation
 
         game_stats = self._generate_game_stats()
-        (state,) = [
-            game_stats["location"]["x"],
-            game_stats["location"]["y"],
-            game_stats["location"]["map_id"],
-            game_stats["battle_type"],
-            game_stats["current_pokemon_health"],
-            game_stats["enemy_pokemon_health"],
-            game_stats["party_size"],
-            game_stats["caught_pokemon"],
-            game_stats["seen_pokemon"],
-        ] + game_stats["hp"]["current"] + game_stats["hp"]["max"] + game_stats["xp"],
+        (state,) = (
+            [
+                game_stats["location"]["x"],
+                game_stats["location"]["y"],
+                game_stats["location"]["map_id"],
+                game_stats["battle_type"],
+                game_stats["current_pokemon_health"],
+                game_stats["enemy_pokemon_health"],
+                game_stats["party_size"],
+                game_stats["caught_pokemon"],
+                game_stats["seen_pokemon"],
+            ]
+            + game_stats["hp"]["current"]
+            + game_stats["hp"]["max"]
+            + game_stats["xp"],
+        )
 
         return state
 
-    def _run_action_on_emulator(self, action, actionable_ticks = 5) -> None:
-        if (self.discrete):
+    def _run_action_on_emulator(self, action, actionable_ticks=5) -> None:
+        if self.discrete:
             pyboy_action_idx = action
         else:
             value = np.clip(action[0], 0.0, 0.9999999)
@@ -138,7 +136,7 @@ class PokemonEnvironment(PyboyEnvironment):
         self.pyboy.button(self.action_names[pyboy_action_idx], actionable_ticks)
         for _ in range(self.act_freq):
             self.pyboy.tick()
-        
+
     @abstractmethod
     def _calculate_reward(self, new_state: dict) -> float:
         # Implement your reward calculation logic here
@@ -211,10 +209,10 @@ class PokemonEnvironment(PyboyEnvironment):
 
         # Iterate through the dictionary of items the player (keys) has and their counts (values)
         for itemId, count in items.items():
-        # Iterate through the types of Pokeballs. If the item (key) matches any of the Pokeball type ids, add the count to the total number of Pokeballs
+            # Iterate through the types of Pokeballs. If the item (key) matches any of the Pokeball type ids, add the count to the total number of Pokeballs
             if itemId in range(0x0, 0x5):
                 total_count += count
-        
+
         return total_count
 
     def _read_party_id(self) -> list[int]:
@@ -309,7 +307,7 @@ class PokemonEnvironment(PyboyEnvironment):
 
     def _read_items_(self) -> dict:
         total_items = self._read_m(0xD31D)
-        if (total_items == 0):
+        if total_items == 0:
             return {}
 
         addr = 0xD31E
@@ -355,7 +353,7 @@ class PokemonEnvironment(PyboyEnvironment):
             else:
                 walkable_tiles_indexes.append(tile_index + 0x100)
         screen_tiles = self._get_screen_background_tilemap()
-        bottom_left_screen_tiles = screen_tiles[1: 1 + screen_tiles.shape[0]: 2, ::2]
+        bottom_left_screen_tiles = screen_tiles[1 : 1 + screen_tiles.shape[0] : 2, ::2]
         walkable_matrix = np.isin(
             bottom_left_screen_tiles, walkable_tiles_indexes
         ).astype(np.uint8)
@@ -371,8 +369,8 @@ class PokemonEnvironment(PyboyEnvironment):
         _collision = self._get_screen_walkable_matrix()
         for i in range(height // 2):
             for j in range(width // 2):
-                game_area[i * 2][j * 2: j * 2 + 2] = _collision[i][j]
-                game_area[i * 2 + 1][j * 2: j * 2 + 2] = _collision[i][j]
+                game_area[i * 2][j * 2 : j * 2 + 2] = _collision[i][j]
+                game_area[i * 2 + 1][j * 2 : j * 2 + 2] = _collision[i][j]
         return game_area
 
     ##################################################################################
@@ -391,42 +389,48 @@ class PokemonEnvironment(PyboyEnvironment):
         )
 
     def _leave_battle_reward(self, new_state: dict[str, any]) -> int:
-        if (new_state["battle_type"] == 0):
+        if new_state["battle_type"] == 0:
             return 1
         return 0
 
     def _player_defeated_punishment(self, new_state: dict[str, any]) -> int:
-        if (sum(new_state["hp"]["current"]) == 0):
+        if sum(new_state["hp"]["current"]) == 0:
             return -1
         return 0
 
     def _current_health_reward(self, new_state: dict[str, any]) -> int:
-        return new_state["current_pokemon_health"] - self.prior_game_stats["current_pokemon_health"]
+        return (
+            new_state["current_pokemon_health"]
+            - self.prior_game_stats["current_pokemon_health"]
+        )
 
     def _enemy_health_decrease_reward(self, new_state: dict[str, any]) -> int:
-        if (new_state["battle_type"] != 0 and self.prior_game_stats["battle_type"] != 0):
+        if new_state["battle_type"] != 0 and self.prior_game_stats["battle_type"] != 0:
             previous_health = self.prior_game_stats["enemy_pokemon_health"]
             current_health = new_state["enemy_pokemon_health"]
 
             health_decrease = previous_health - current_health
-            
-            return max(0, health_decrease) # Doesn't punish when enemy health goes up
+
+            return max(0, health_decrease)  # Doesn't punish when enemy health goes up
         return 0
 
     def _own_pokemon_health_decrease_punishment(self, new_state: dict[str, any]) -> int:
 
-        if (new_state["battle_type"] == 0 or self.prior_game_stats["battle_type"] == 0):
+        if new_state["battle_type"] == 0 or self.prior_game_stats["battle_type"] == 0:
             return 0
-        
-        if (new_state["current_pokemon_id"] != self.prior_game_stats["current_pokemon_id"]):
+
+        if (
+            new_state["current_pokemon_id"]
+            != self.prior_game_stats["current_pokemon_id"]
+        ):
             return 0
 
         previous_health = self.prior_game_stats["current_pokemon_health"]
         current_health = new_state["current_pokemon_health"]
 
         health_decrease = previous_health - current_health
-        
-        return -health_decrease # negative as this is a punishment
+
+        return -health_decrease  # negative as this is a punishment
 
     def _xp_increase_reward(self, new_state: dict[str, any]) -> int:
         return sum(new_state["xp"]) - sum(self.prior_game_stats["xp"])
@@ -437,11 +441,11 @@ class PokemonEnvironment(PyboyEnvironment):
         current_levels = new_state["levels"]
         for i in range(len(prev_levels)):
             increase = current_levels[i] - prev_levels[i]
-            if (increase == 0 or prev_levels[i] == 0):
+            if increase == 0 or prev_levels[i] == 0:
                 break
             ratio = float(increase) / float(prev_levels[i])
             total_reward += ratio
-        
+
         return total_reward
 
     def _badges_reward(self, new_state: dict[str, any]) -> int:
@@ -463,7 +467,6 @@ class PokemonEnvironment(PyboyEnvironment):
         previous_count = self._get_pokeball_count(self.prior_game_stats["items"])
         new_count = self._get_pokeball_count(new_state["items"])
 
-
         if previous_count > new_count:
             return 1
         else:
@@ -479,7 +482,10 @@ class PokemonEnvironment(PyboyEnvironment):
             return 0
 
     def _start_battle_reward(self, new_state, battle_type=1) -> int:
-        if (new_state["battle_type"] == battle_type and self.prior_game_stats["battle_type"] == 0):
+        if (
+            new_state["battle_type"] == battle_type
+            and self.prior_game_stats["battle_type"] == 0
+        ):
             return 1
         return 0
 

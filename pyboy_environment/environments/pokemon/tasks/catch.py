@@ -17,6 +17,7 @@ bought_pokeball_multiplier = 100
 
 num_steps_truncate = 1000
 
+
 class PokemonCatch(PokemonEnvironment):
     def __init__(
         self,
@@ -48,10 +49,8 @@ class PokemonCatch(PokemonEnvironment):
         reward += bought_pokeball_multiplier * self._bought_pokeball_reward(new_state)
         return reward
 
-
     def _check_if_done(self, game_stats: dict[str, any]) -> bool:
         return False
-
 
     def _check_if_truncated(self, game_stats: dict) -> bool:
         # Implement your truncation check logic here
