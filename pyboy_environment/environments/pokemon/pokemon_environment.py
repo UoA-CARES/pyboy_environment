@@ -4,7 +4,6 @@ from functools import cached_property
 from abc import abstractmethod
 
 from tkinter import Tk
-from pyboy_environment.state_display import StateDisplay
 
 import numpy as np
 from pyboy.utils import WindowEvent
@@ -26,9 +25,6 @@ class PokemonEnvironment(PyboyEnvironment):
 
         self.discrete = discrete
 
-        if not headless:
-            self.state_display = StateDisplay()
-
         valid_actions: list[WindowEvent] = [
             WindowEvent.PRESS_ARROW_DOWN,
             WindowEvent.PRESS_ARROW_LEFT,
@@ -46,6 +42,16 @@ class PokemonEnvironment(PyboyEnvironment):
             WindowEvent.RELEASE_BUTTON_A,
             WindowEvent.RELEASE_BUTTON_B,
         ]
+
+        self.action_names = [
+            "Down",
+            "Left",
+            "Right",
+            "Up",
+            "A",
+            "B"
+        ]
+
 
         super().__init__(
             task=task,
@@ -174,8 +180,6 @@ class PokemonEnvironment(PyboyEnvironment):
             "events": self._read_events(),
             "items": self._read_items_(),
         }
-        if not self.headless:
-            self.state_display.update_display(stats)
         return stats
 
     def _get_location(self) -> dict[str, any]:
