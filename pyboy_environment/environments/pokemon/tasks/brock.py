@@ -1,12 +1,5 @@
-from functools import cached_property
-
 import numpy as np
-from pyboy.utils import WindowEvent
-
-from pyboy_environment.environments.pokemon.pokemon_environment import (
-    PokemonEnvironment,
-)
-from pyboy_environment.environments.pokemon import pokemon_constants as pkc
+from pyboy_environment.environments.pokemon.pokemon_environment import PokemonEnvironment
 
 # Reward Constants
 # Larger value giving to sparser rewards
@@ -20,6 +13,7 @@ LEVEL_UP_MULTIPLIER = 10000
 MOVE_UP_REWARD = 1
 ENTER_POKEMART_REWARD = 1000
 PURCHASE_POKEBALL_MULTIPLIER = 500
+THROW_POKEBALL_MULTIPLIER = 100
 CATCH_POKEMON_REWARD = 1000
 TASK_COMPLETION_MULTIPLIER = 10000
 MOVE_CLOSER_TO_GYM_REWARD = 10000
@@ -69,7 +63,7 @@ class PokemonBrock(PokemonEnvironment):
         game_stats["tasks"] = self.tasks
 
     def _select_task(self, game_stats: dict) -> int:
-        if game_stats["levels"][0] < 6:
+        if game_stats["levels"][0] < 8:
             return 0  # fight
         elif game_stats["party_size"] < 3 and self._get_num_pokeballs() < 10:
             if game_stats["map_id"] != 1 and game_stats["map_id"] != 0x2A:
@@ -97,8 +91,8 @@ class PokemonBrock(PokemonEnvironment):
 
         return True
 
-    # OVERRIDE to remove map name (string)
     def _get_location(self) -> dict[str, any]:
+        # OVERRIDE to remove map name (string)
         x_pos = self._read_m(0xD362)
         y_pos = self._read_m(0xD361)
         map_n = self._read_m(0xD35E)
@@ -109,12 +103,6 @@ class PokemonBrock(PokemonEnvironment):
             "map_id": map_n,
         }
 
-    def _read_battle_type(self) -> int:
-        return self._read_m(0xD057)
-
-    def _get_enemy_pokemon_health(self) -> int:
-        return self._read_hp(0xCFE6)
-
     def _get_current_selected_menu_item(self) -> int:
         return self._read_m(0xCC26)
 
@@ -124,32 +112,8 @@ class PokemonBrock(PokemonEnvironment):
     def _get_current_pokemon_id(self) -> int:
         return self._read_m(0xD014)
 
-    def _is_in_grass(self) -> int:
-        if self._is_grass_tile():
-            return 1
-        else:
-            return 0
-
-    # returns a dictionary of owned items
-    # (has to be expressed in terms of its max capacity to avoid dictionary changing size and consequently input space)
-    def _get_items(self) -> dict:
-        total_items = self._read_m(0xD31D)
-        if total_items == 0:
-            return {}
-
-        addr = 0xD31E
-        items = {}
-
-        for i in range(total_items):
-            item_id = self._read_m(addr + 2 * i)
-            item_count = self._read_m(addr + 2 * i + 1)
-            items[f"item_{item_id}"] = item_count
-
-        return items
-
-    # computes the total number of poke balls.
     def _get_num_pokeballs(self) -> int:
-        items = self._get_items()
+        items = self._read_items()
         keys = items.keys()
         num_pokeballs = 0
 
@@ -174,21 +138,15 @@ class PokemonBrock(PokemonEnvironment):
 
         game_stats = {
             **self._get_location(),
-            "in_grass": self._is_in_grass(),
+            "in_grass": self._is_in_grass_tile(),
             "party_size": self._get_party_size(),
             "ids": self._read_party_id(),
-            # "pokemon": [pkc.get_pokemon(id) for id in self._read_party_id()],
             "levels": self._read_party_level(),
-            # "type_id": self._read_party_type(),
-            # "type": [pkc.get_type(id) for id in self._read_party_type()],
             **self._read_party_hp(),
             "xp": self._read_party_xp(),
             "status": self._read_party_status(),
             "badges": self._get_badge_count(),
-            # "caught_pokemon": self._read_caught_pokemon_count(),
-            # "seen_pokemon": self._read_seen_pokemon_count(),
             "money": self._read_money(),
-            # "events": self._read_events(),
             "battle_type": self._read_battle_type(),
             "enemy_pokemon_health": self._get_enemy_pokemon_health(),
             "current_pokemon_id": self._get_current_pokemon_id(),
@@ -219,25 +177,7 @@ class PokemonBrock(PokemonEnvironment):
     ####################### Reward Functions #######################
     ################################################################
 
-    def _start_battle_reward(self, new_state) -> int:
-        if new_state["battle_type"] != 0 and self.prior_game_stats["battle_type"] == 0:
-            return START_BATTLE_REWARD
-        return 0
-
-    def _deal_damage_reward(self, new_state: dict[str, any]) -> int:
-        damage_dealt = (
-            self.prior_game_stats["enemy_pokemon_health"]
-            - new_state["enemy_pokemon_health"]
-        )
-        if new_state["battle_type"] != self.prior_game_stats["battle_type"]:
-            return 0
-        else:
-            return damage_dealt * DEAL_DAMAGE_MULTIPLIER
-
-    def _xp_reward(self, new_state: dict[str, any]) -> int:
-        delta_xp = sum(new_state["xp"]) - sum(self.prior_game_stats["xp"])
-        return delta_xp * GAIN_XP_MULTIPLER
-
+    ### Override to include custom step logic
     def _levels_reward(self, new_state: dict[str, any]) -> float:
         reward = 0
         new_levels = new_state["levels"]
@@ -245,20 +185,23 @@ class PokemonBrock(PokemonEnvironment):
         for i in range(len(new_levels)):
             if new_levels[i] > old_levels[i]:
                 reward += (new_levels[i] / old_levels[i] - 1) * LEVEL_UP_MULTIPLIER
-                self.steps -= (
-                    new_levels[i] ** 2 * LEVEL_UP_EXTRA_STEPS_MULTIPLIER
-                )  # add extra hundred steps after a level up is performed
+                self.steps -= (new_levels[i] ** 2 * LEVEL_UP_EXTRA_STEPS_MULTIPLIER)
+                # add extra hundred steps after a level up is performed
         return reward
 
-    def _get_fight_reward(self, new_state: dict) -> float:
-        reward = self._is_in_grass() * IN_GRASS_REWARD
-        reward += self._start_battle_reward(new_state)
-        reward += self._deal_damage_reward(new_state)
-        reward += self._xp_reward(new_state)
+    ################################################################
+    ##################### Task Reward Functions ####################
+    ################################################################
+
+    def _reward_task_fight_pokemon(self, new_state: dict) -> float:
+        reward = self._is_in_grass_reward(reward=IN_GRASS_REWARD) 
+        reward += self._start_battle_reward(new_state, reward=START_BATTLE_REWARD)
+        reward += self._deal_damage_reward(new_state, multiplier=DEAL_DAMAGE_MULTIPLIER)
+        reward += self._xp_increase_reward(new_state, multiplier=GAIN_XP_MULTIPLER)
         reward += self._levels_reward(new_state)
         return reward
 
-    def _get_enter_pokemart_village_reward(self, new_state: dict) -> float:
+    def _reward_task_enter_v_city(self, new_state: dict) -> float:
         if new_state["map_id"] != 0x0C or new_state["map_id"] != 0x00:
             return 0
 
@@ -269,13 +212,13 @@ class PokemonBrock(PokemonEnvironment):
 
         return 0
 
-    def _get_enter_pokemart_reward(self, new_state: dict) -> float:
+    def _reward_task_enter_pokemart(self, new_state: dict) -> float:
         if self.prior_game_stats["map_id"] != 0x2A and new_state["map_id"] == 0x2A:
             return ENTER_POKEMART_REWARD
         else:
             return 0
 
-    def _get_purchase_pokeballs_reward(self, new_state: dict) -> float:
+    def _reward_task_buy_pokeball(self, new_state: dict) -> float:
         delta_pokeball = self._get_num_pokeballs(new_state) - self._get_num_pokeballs(
             self.prior_game_stats
         )
@@ -283,20 +226,12 @@ class PokemonBrock(PokemonEnvironment):
             return delta_pokeball * PURCHASE_POKEBALL_MULTIPLIER
         return 0
 
-    def _get_catch_pokemon_reward(self, new_state: dict) -> float:
-        delta_pokeball = self._get_num_pokeballs(new_state) - self._get_num_pokeballs(
-            self.prior_game_stats
-        )
-        reward = 0
-        if delta_pokeball < 0:
-            reward += delta_pokeball * -PURCHASE_POKEBALL_MULTIPLIER
-
-        if new_state["party_size"] > self.prior_game_stats["party_size"]:
-            reward += CATCH_POKEMON_REWARD
-
+    def _reward_task_catch_pokemon(self, new_state: dict, reward) -> float:
+        reward = self._throw_pokeball_reward(new_state, THROW_POKEBALL_MULTIPLIER)
+        reward += self._catch_pokemon_reward(new_state, CATCH_POKEMON_REWARD, reward > 0)
         return reward
 
-    def _find_gym_reward(self, new_state: dict) -> float:
+    def _reward_task_find_gym(self, new_state: dict) -> float:
         room_ids = [0x00, 0x0C, 0x01, 0x0D, 0x32, 0x33, 0x2F, 0x0D, 0x02, 0x36]
         old_index = room_ids.index(self.prior_game_stats["map_id"])
         new_index = room_ids.index(new_state["map_id"])
@@ -313,7 +248,7 @@ class PokemonBrock(PokemonEnvironment):
         else:
             return 0
 
-    def _get_fight_brock_reward(self, new_state: dict) -> float:
+    def _reward_task_fight_brock(self, new_state: dict) -> float:
         reward = 0
         if new_state["battle_type" == 2]:
             if self.prior_game_stats["battle_type"] == 2:
@@ -338,19 +273,19 @@ class PokemonBrock(PokemonEnvironment):
         # compute the reward for the new state given the previous task and the corresponding action
         task = self.prior_game_stats["tasks"].index(1)
         if task == 0 or task == 5:
-            reward += self._get_fight_reward(new_state)
+            reward += self._reward_task_fight_pokemon(new_state)
         elif task == 1:
-            reward += self._get_enter_pokemart_village_reward(new_state)
+            reward += self._reward_task_enter_v_city(new_state)
         elif task == 2:
-            reward += self._get_enter_pokemart_reward(new_state)
+            reward += self._reward_task_enter_pokemart(new_state)
         elif task == 3:
-            reward += self._get_purchase_pokeballs_reward(new_state)
+            reward += self._reward_task_buy_pokeball(new_state)
         elif task == 4:
-            reward += self._get_catch_pokemon_reward(new_state)
+            reward += self._reward_task_catch_pokemon(new_state)
         elif task == 5:
-            reward += self._find_gym_reward(new_state)
+            reward += self._reward_task_find_gym(new_state)
         else:  # must be 7
-            reward += self._get_fight_brock_reward(new_state)
+            reward += self._reward_task_fight_brock(new_state)
 
         # reward for completing a task (is negative for reverting to previous task)
         task_diff = self._get_task_index_diff(new_state)

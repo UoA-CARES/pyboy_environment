@@ -200,9 +200,8 @@ class PokemonEnvironment(PyboyEnvironment):
     def _get_badge_count(self) -> int:
         return self._bit_count(self._read_m(0xD356))
 
-    def _is_grass_tile(self) -> bool:
-        grass_tile_index = self._read_m(0xD535)
-        player_sprite_status = self._read_m(0xC207)  # Assuming player is sprite 0
+    def _is_in_grass_tile(self) -> bool:
+        player_sprite_status = self._read_m(0xC207)
         return player_sprite_status == 0x80
 
     def _get_pokeball_count(self, items) -> int:
@@ -306,7 +305,9 @@ class PokemonEnvironment(PyboyEnvironment):
     def _read_battle_type(self) -> int:
         return self._read_m(0xD057)
 
-    def _read_items_(self) -> dict:
+    def _read_items(self) -> dict[str, int]:
+    # returns a dictionary of owned items
+    # BROKEN (needs to be expressed in terms of its max capacity to avoid dictionary changing size and consequently input space)
         total_items = self._read_m(0xD31D)
         if total_items == 0:
             return {}
@@ -317,10 +318,10 @@ class PokemonEnvironment(PyboyEnvironment):
         for i in range(total_items):
             item_id = self._read_m(addr + 2 * i)
             item_count = self._read_m(addr + 2 * i + 1)
-            items[item_id] = item_count
+            items[f"item_{item_id}"] = item_count
 
         return items
-
+    
     def _get_active_pokemon_id(self) -> int:
         return self._read_m(0xD014)
 
@@ -375,47 +376,108 @@ class PokemonEnvironment(PyboyEnvironment):
         return game_area
 
     ##################################################################################
-    ################################# REWARD HELPERS #################################
+    ############################### BASE REWARD HELPERS ##############################
     ##################################################################################
 
-    def _caught_reward(self, new_state: dict[str, any]) -> int:
-        return new_state["caught_pokemon"] - self.prior_game_stats["caught_pokemon"]
+    def _buy_pokeball_reward(self, new_state: dict[str, any], reward: float = 1) -> float:
+        # Does not consider any other method of acquiring pokeballs
+        previous_count = self._get_pokeball_count(self.prior_game_stats["items"])
+        new_count = self._get_pokeball_count(new_state["items"])
 
-    def _seen_reward(self, new_state: dict[str, any]) -> int:
+        if new_count > previous_count:
+            return reward
+        else:
+            return 0
+
+    def _catch_pokemon_reward(self, new_state: dict[str, any], reward: float = 1, pokeball_thrown: bool = True) -> float:
+        if (not pokeball_thrown):
+            return 0
+
+        previous_count = self.prior_game_stats["party_size"]
+        new_count = new_state["party_size"]
+
+        if new_count > previous_count:
+            return reward
+        else:
+            return 0
+
+    def _deal_damage_reward(self, new_state: dict[str, any], multiplier: float = 1) -> float:
+        damage_dealt = (
+            self.prior_game_stats["enemy_pokemon_health"]
+            - new_state["enemy_pokemon_health"]
+        )
+        if new_state["battle_type"] != self.prior_game_stats["battle_type"]:
+            return 0
+        else:
+            return max(0, damage_dealt) * multiplier # avoid punishing for enemy healing
+        
+    def _is_in_grass_reward(self, reward: float = 1) -> float:
+        if self._is_in_grass_tile():
+            return reward
+        return 0
+
+    def _levels_increase_reward(self, new_state: dict[str, any], multiplier: float = 1) -> float:
+        reward = 0
+        prev_levels = self.prior_game_stats["levels"]
+        current_levels = new_state["levels"]
+        for i in range(len(prev_levels)):
+            increase = current_levels[i] - prev_levels[i]
+            if increase == 0 or prev_levels[i] == 0:
+                break
+            ratio = float(increase) / float(prev_levels[i])
+            reward += ratio
+
+        return reward * multiplier
+    
+    def _start_battle_reward(self, new_state: dict[str, any], reward: float = 1, battle_type: int = 1) -> float:
+        if (
+            new_state["battle_type"] == battle_type
+            and self.prior_game_stats["battle_type"] == 0
+        ):
+            return reward
+        return 0
+
+    def _throw_pokeball_reward(self, new_state: dict[str, any], reward: float = 1) -> float:
+        previous_count = self._get_pokeball_count(self.prior_game_stats["items"])
+        new_count = self._get_pokeball_count(new_state["items"])
+
+        if previous_count > new_count:
+            return reward
+        else:
+            return 0
+        
+    def _xp_increase_reward(self, new_state: dict[str, any], multiplier: float = 1) -> float:
+        return (sum(new_state["xp"]) - sum(self.prior_game_stats["xp"])) * multiplier
+
+    ##################################################################################
+    ################################# OTHER REWARDS ##################################
+    ##################################################################################
+
+    def _seen_reward(self, new_state: dict[str, any]) -> float:
         return new_state["seen_pokemon"] - self.prior_game_stats["seen_pokemon"]
 
-    def _health_reward(self, new_state: dict[str, any]) -> int:
+    def _current_pokemon_health_reward(self, new_state: dict[str, any]) -> float:
         return sum(new_state["hp"]["current"]) - sum(
             self.prior_game_stats["hp"]["current"]
         )
 
-    def _leave_battle_reward(self, new_state: dict[str, any]) -> int:
+    def _leave_battle_reward(self, new_state: dict[str, any]) -> float:
         if new_state["battle_type"] == 0:
             return 1
         return 0
 
-    def _player_defeated_punishment(self, new_state: dict[str, any]) -> int:
+    def _player_defeated_punishment(self, new_state: dict[str, any]) -> float:
         if sum(new_state["hp"]["current"]) == 0:
             return -1
         return 0
 
-    def _current_health_reward(self, new_state: dict[str, any]) -> int:
+    def _current_health_reward(self, new_state: dict[str, any]) -> float:
         return (
             new_state["current_pokemon_health"]
             - self.prior_game_stats["current_pokemon_health"]
         )
 
-    def _enemy_health_decrease_reward(self, new_state: dict[str, any]) -> int:
-        if new_state["battle_type"] != 0 and self.prior_game_stats["battle_type"] != 0:
-            previous_health = self.prior_game_stats["enemy_pokemon_health"]
-            current_health = new_state["enemy_pokemon_health"]
-
-            health_decrease = previous_health - current_health
-
-            return max(0, health_decrease)  # Doesn't punish when enemy health goes up
-        return 0
-
-    def _own_pokemon_health_decrease_punishment(self, new_state: dict[str, any]) -> int:
+    def _own_pokemon_health_decrease_punishment(self, new_state: dict[str, any]) -> float:
 
         if new_state["battle_type"] == 0 or self.prior_game_stats["battle_type"] == 0:
             return 0
@@ -433,77 +495,11 @@ class PokemonEnvironment(PyboyEnvironment):
 
         return -health_decrease  # negative as this is a punishment
 
-    def _xp_increase_reward(self, new_state: dict[str, any]) -> int:
-        return sum(new_state["xp"]) - sum(self.prior_game_stats["xp"])
-
-    def _levels_increase_reward(self, new_state: dict[str, any]) -> int:
-        total_reward = 0
-        prev_levels = self.prior_game_stats["levels"]
-        current_levels = new_state["levels"]
-        for i in range(len(prev_levels)):
-            increase = current_levels[i] - prev_levels[i]
-            if increase == 0 or prev_levels[i] == 0:
-                break
-            ratio = float(increase) / float(prev_levels[i])
-            total_reward += ratio
-
-        return total_reward
-
-    def _badges_reward(self, new_state: dict[str, any]) -> int:
+    def _badges_reward(self, new_state: dict[str, any]) -> float:
         return new_state["badges"] - self.prior_game_stats["badges"]
 
-    def _money_reward(self, new_state: dict[str, any]) -> int:
+    def _money_reward(self, new_state: dict[str, any]) -> float:
         return new_state["money"] - self.prior_game_stats["money"]
 
-    def _event_reward(self, new_state: dict[str, any]) -> int:
+    def _event_reward(self, new_state: dict[str, any]) -> float:
         return sum(new_state["events"]) - sum(self.prior_game_stats["events"])
-
-    # in grass reward function that returns reward
-    def _grass_reward(self, new_state: dict[str, any]) -> int:
-        if self._is_grass_tile():
-            return 1
-        return 0
-
-    def _pokeball_thrown_reward(self, new_state) -> int:
-        previous_count = self._get_pokeball_count(self.prior_game_stats["items"])
-        new_count = self._get_pokeball_count(new_state["items"])
-
-        if previous_count > new_count:
-            return 1
-        else:
-            return 0
-
-    def _bought_pokeball_reward(self, new_state) -> int:
-        previous_count = self._get_pokeball_count(self.prior_game_stats["items"])
-        new_count = self._get_pokeball_count(new_state["items"])
-
-        if new_count > previous_count:
-            return 1
-        else:
-            return 0
-
-    def _start_battle_reward(self, new_state, battle_type=1) -> int:
-        if (
-            new_state["battle_type"] == battle_type
-            and self.prior_game_stats["battle_type"] == 0
-        ):
-            return 1
-        return 0
-
-    def _pokeball_thrown_reward(self, new_state) -> int:
-        previous_count = self._get_pokeball_count(self.prior_game_stats["items"])
-        new_count = self._get_pokeball_count(new_state["items"])
-
-        if previous_count > new_count:
-            return 1
-        else:
-            return 0
-
-    def _bought_pokeball_reward(self, new_state) -> int:
-        previous_count = self._get_pokeball_count(self.prior_game_stats["items"])
-        new_count = self._get_pokeball_count(new_state["items"])
-
-        if new_count > previous_count:
-            return 1
-        else:
-            return 0

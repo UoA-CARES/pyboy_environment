@@ -1,22 +1,16 @@
-from functools import cached_property
-
 import numpy as np
-from pyboy.utils import WindowEvent
 
-from pyboy_environment.environments.pokemon.pokemon_environment import (
-    PokemonEnvironment,
-)
-from pyboy_environment.environments.pokemon import pokemon_constants as pkc
+from pyboy_environment.environments.pokemon.pokemon_environment import PokemonEnvironment
 
 # rewards
-do_nothing_base = -1
-start_battle_reward = 10
-pokeball_thrown_multiplier = 100
-caught_multiplier = 500
-bought_pokeball_multiplier = 100
+DO_NOTHING_BASE = -1
+START_BATTLE_REWARD = 10
+THROW_POKEBALL_REWARD = 100
+CATCH_POKEMON_REWARD = 500
+BUY_POKEBALL_REWARD = 100
 
+# other params
 num_steps_truncate = 1000
-
 
 class PokemonCatch(PokemonEnvironment):
     def __init__(
@@ -42,11 +36,11 @@ class PokemonCatch(PokemonEnvironment):
 
     def _calculate_reward(self, new_state: dict) -> float:
         # Implement your reward calculation logic here
-        reward = do_nothing_base
+        reward = DO_NOTHING_BASE
         reward += self._start_battle_reward(new_state)
-        reward += pokeball_thrown_multiplier * self._pokeball_thrown_reward(new_state)
-        reward += caught_multiplier * self._caught_reward(new_state)
-        reward += bought_pokeball_multiplier * self._bought_pokeball_reward(new_state)
+        reward += self._throw_pokeball_reward(new_state, reward=THROW_POKEBALL_REWARD)
+        reward += self._catch_pokemon_reward(new_state, reward=CATCH_POKEMON_REWARD)
+        reward += self._buy_pokeball_reward(new_state, reward=BUY_POKEBALL_REWARD)
         return reward
 
     def _check_if_done(self, game_stats: dict[str, any]) -> bool:
