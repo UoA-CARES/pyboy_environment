@@ -1,4 +1,4 @@
-from pyboy_environment.environments.pokemon.tasks.flexi import PokemonFlexiEnv
+from pyboy_environment.environments.pokemon.tasks.fight import PokemonFight
 
 import sys
 import termios
@@ -37,7 +37,7 @@ def wait_for_input():
 
 def main():
 
-    env = PokemonFlexiEnv(act_freq=24, discrete=True)
+    env = PokemonFight(act_freq=24, discrete=True)
     env.step(3)
 
     while True:
