@@ -73,7 +73,7 @@ class PokemonEnvironment(PyboyEnvironment):
     def action_num(self) -> int:
         if self.discrete:
             return len(self.valid_actions)
-        
+
         return 1
 
     def sample_action(self) -> list[int]:
@@ -81,7 +81,7 @@ class PokemonEnvironment(PyboyEnvironment):
             length = len(self.valid_actions)
             random_index = np.random.randint(0, length)
             return random_index
-        
+
         return np.array([np.random.random()])
 
     def _get_state(self) -> np.ndarray:
@@ -373,7 +373,7 @@ class PokemonEnvironment(PyboyEnvironment):
 
         if new_count > previous_count:
             return reward
-        
+
         return 0
 
     def _catch_pokemon_reward(
@@ -387,7 +387,7 @@ class PokemonEnvironment(PyboyEnvironment):
 
         if new_count > previous_count:
             return reward
-        
+
         return 0
 
     def _deal_damage_reward(
@@ -400,9 +400,9 @@ class PokemonEnvironment(PyboyEnvironment):
 
         if new_state["battle_type"] != self.prior_game_stats["battle_type"]:
             return 0
-        
-        return max(0, damage_dealt) * multiplier # avoid punishing for enemy healing
-        
+
+        return max(0, damage_dealt) * multiplier  # avoid punishing for enemy healing
+
     def _is_in_grass_reward(self, reward: float = 1) -> float:
         if self._is_in_grass_tile():
             return reward
@@ -417,7 +417,7 @@ class PokemonEnvironment(PyboyEnvironment):
         for i, prev_level in enumerate(prev_levels):
             increase = current_levels[i] - prev_level
             if increase == 0 or prev_level == 0:
-                break # no increase or pokemart was not in party before
+                break  # no increase or pokemart was not in party before
             ratio = float(increase) / float(prev_level)
             reward += ratio
 
@@ -441,10 +441,12 @@ class PokemonEnvironment(PyboyEnvironment):
 
         if previous_count > new_count:
             return reward
-        
+
         return 0
 
-    def _xp_increase_reward(self, new_state: dict[str, any], multiplier: float = 1) -> float:
+    def _xp_increase_reward(
+        self, new_state: dict[str, any], multiplier: float = 1
+    ) -> float:
         return (sum(new_state["xp"]) - sum(self.prior_game_stats["xp"])) * multiplier
 
     ##################################################################################

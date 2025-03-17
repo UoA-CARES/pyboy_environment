@@ -5,6 +5,7 @@ import time
 
 import pyboy_environment.suite as Suite
 
+
 def wait_for_input():
     key_mapping = {
         "\x1b[A": 3,
