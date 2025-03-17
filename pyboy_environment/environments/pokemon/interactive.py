@@ -1,4 +1,5 @@
 from pyboy_environment.environments.pokemon.tasks.fight import PokemonFight
+import pyboy_environment.suite as Suite
 
 import sys
 import termios
@@ -35,10 +36,14 @@ def wait_for_input():
     return key_mapping.get(key)
 
 
-def main():
+def main(argv):
+    if len(argv) < 2:
+        print("Usage: interactive.py <domain> <task>")
+        sys.exit(1)
 
-    env = PokemonFight(act_freq=24, discrete=True)
-    env.step(3)
+    env = Suite.make(argv[0], argv[1], 24, headless=False, discrete=True)
+
+    env.step(3) # initial step to load screen
 
     while True:
         index = wait_for_input()
@@ -46,9 +51,9 @@ def main():
             continue
         [state, reward, done, truncated] = env.step(index)
         print(
-            f"\rKey: {index}, Task: {env.get_current_task().name}, Reward: {reward}, Done/Trunc: {done or truncated}\r"
+            f"\rReward: {reward}"
         )
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
