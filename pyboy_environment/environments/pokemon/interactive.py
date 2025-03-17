@@ -1,11 +1,9 @@
-from pyboy_environment.environments.pokemon.tasks.fight import PokemonFight
-import pyboy_environment.suite as Suite
-
 import sys
 import termios
 import tty
 import time
 
+import pyboy_environment.suite as Suite
 
 def wait_for_input():
     key_mapping = {
@@ -49,7 +47,7 @@ def main(argv):
         index = wait_for_input()
         if index == -1:
             continue
-        [state, reward, done, truncated] = env.step(index)
+        [_, reward, _, _] = env.step(index)
         print(f"\rReward: {reward}")
 
 

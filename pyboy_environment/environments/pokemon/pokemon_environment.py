@@ -1,9 +1,5 @@
-import random
-import logging
 from functools import cached_property
 from abc import abstractmethod
-
-from tkinter import Tk
 
 import numpy as np
 from pyboy.utils import WindowEvent
@@ -75,21 +71,18 @@ class PokemonEnvironment(PyboyEnvironment):
 
     @cached_property
     def action_num(self) -> int:
-
         if self.discrete:
             return len(self.valid_actions)
-        else:
-            return 1
+        
+        return 1
 
     def sample_action(self) -> list[int]:
-
         if self.discrete:
             length = len(self.valid_actions)
             random_index = np.random.randint(0, length)
-
             return random_index
-        else:
-            return np.array([np.random.random()])
+        
+        return np.array([np.random.random()])
 
     def _get_state(self) -> np.ndarray:
         # Implement your state retrieval logic here - compact state based representation
@@ -170,7 +163,7 @@ class PokemonEnvironment(PyboyEnvironment):
             "seen_pokemon": self._read_seen_pokemon_count(),
             "money": self._read_money(),
             "events": self._read_events(),
-            "items": self._read_items_(),
+            "items": self._read_items(),
         }
         return stats
 
@@ -380,8 +373,8 @@ class PokemonEnvironment(PyboyEnvironment):
 
         if new_count > previous_count:
             return reward
-        else:
-            return 0
+        
+        return 0
 
     def _catch_pokemon_reward(
         self, new_state: dict[str, any], reward: float = 1, pokeball_thrown: bool = True
@@ -394,8 +387,8 @@ class PokemonEnvironment(PyboyEnvironment):
 
         if new_count > previous_count:
             return reward
-        else:
-            return 0
+        
+        return 0
 
     def _deal_damage_reward(
         self, new_state: dict[str, any], multiplier: float = 1
@@ -404,13 +397,12 @@ class PokemonEnvironment(PyboyEnvironment):
             self.prior_game_stats["enemy_pokemon_health"]
             - new_state["enemy_pokemon_health"]
         )
+
         if new_state["battle_type"] != self.prior_game_stats["battle_type"]:
             return 0
-        else:
-            return (
-                max(0, damage_dealt) * multiplier
-            )  # avoid punishing for enemy healing
-
+        
+        return max(0, damage_dealt) * multiplier # avoid punishing for enemy healing
+        
     def _is_in_grass_reward(self, reward: float = 1) -> float:
         if self._is_in_grass_tile():
             return reward
@@ -422,11 +414,11 @@ class PokemonEnvironment(PyboyEnvironment):
         reward = 0
         prev_levels = self.prior_game_stats["levels"]
         current_levels = new_state["levels"]
-        for i in range(len(prev_levels)):
-            increase = current_levels[i] - prev_levels[i]
-            if increase == 0 or prev_levels[i] == 0:
-                break
-            ratio = float(increase) / float(prev_levels[i])
+        for i, prev_level in enumerate(prev_levels):
+            increase = current_levels[i] - prev_level
+            if increase == 0 or prev_level == 0:
+                break # no increase or pokemart was not in party before
+            ratio = float(increase) / float(prev_level)
             reward += ratio
 
         return reward * multiplier
@@ -449,12 +441,10 @@ class PokemonEnvironment(PyboyEnvironment):
 
         if previous_count > new_count:
             return reward
-        else:
-            return 0
+        
+        return 0
 
-    def _xp_increase_reward(
-        self, new_state: dict[str, any], multiplier: float = 1
-    ) -> float:
+    def _xp_increase_reward(self, new_state: dict[str, any], multiplier: float = 1) -> float:
         return (sum(new_state["xp"]) - sum(self.prior_game_stats["xp"])) * multiplier
 
     ##################################################################################
