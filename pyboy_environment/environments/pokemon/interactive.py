@@ -32,10 +32,23 @@ def wait_for_input():
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
-    return key_mapping.get(key)
+    mapping = key_mapping.get(key)
+    if mapping is None:
+        print(f"\rUnknown key: {key}\r")
+        return -1
+    return mapping
 
 
 def main(argv):
+    actions = {
+        0: "DOWN",
+        1: "LEFT",
+        2: "RIGHT",
+        3: "UP",
+        4: "A",
+        5: "B",
+    }
+
     if len(argv) < 2:
         print("Usage: interactive.py <domain> <task>")
         sys.exit(1)
@@ -49,7 +62,7 @@ def main(argv):
         if index == -1:
             continue
         [_, reward, _, _] = env.step(index)
-        print(f"\rReward: {reward}")
+        print(f"\rAction: {actions[index]:5} | Reward: {reward}\r")
 
 
 if __name__ == "__main__":
