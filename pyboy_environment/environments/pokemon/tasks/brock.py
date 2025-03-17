@@ -1,5 +1,7 @@
 import numpy as np
-from pyboy_environment.environments.pokemon.pokemon_environment import PokemonEnvironment
+from pyboy_environment.environments.pokemon.pokemon_environment import (
+    PokemonEnvironment,
+)
 
 # Reward Constants
 # Larger value giving to sparser rewards
@@ -185,7 +187,7 @@ class PokemonBrock(PokemonEnvironment):
         for i in range(len(new_levels)):
             if new_levels[i] > old_levels[i]:
                 reward += (new_levels[i] / old_levels[i] - 1) * LEVEL_UP_MULTIPLIER
-                self.steps -= (new_levels[i] ** 2 * LEVEL_UP_EXTRA_STEPS_MULTIPLIER)
+                self.steps -= new_levels[i] ** 2 * LEVEL_UP_EXTRA_STEPS_MULTIPLIER
                 # add extra hundred steps after a level up is performed
         return reward
 
@@ -194,7 +196,7 @@ class PokemonBrock(PokemonEnvironment):
     ################################################################
 
     def _reward_task_fight_pokemon(self, new_state: dict) -> float:
-        reward = self._is_in_grass_reward(reward=IN_GRASS_REWARD) 
+        reward = self._is_in_grass_reward(reward=IN_GRASS_REWARD)
         reward += self._start_battle_reward(new_state, reward=START_BATTLE_REWARD)
         reward += self._deal_damage_reward(new_state, multiplier=DEAL_DAMAGE_MULTIPLIER)
         reward += self._xp_increase_reward(new_state, multiplier=GAIN_XP_MULTIPLER)
@@ -228,7 +230,9 @@ class PokemonBrock(PokemonEnvironment):
 
     def _reward_task_catch_pokemon(self, new_state: dict, reward) -> float:
         reward = self._throw_pokeball_reward(new_state, THROW_POKEBALL_MULTIPLIER)
-        reward += self._catch_pokemon_reward(new_state, CATCH_POKEMON_REWARD, reward > 0)
+        reward += self._catch_pokemon_reward(
+            new_state, CATCH_POKEMON_REWARD, reward > 0
+        )
         return reward
 
     def _reward_task_find_gym(self, new_state: dict) -> float:

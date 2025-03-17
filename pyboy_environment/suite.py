@@ -4,6 +4,7 @@ from pyboy_environment.environments.pokemon.tasks.fight import PokemonFight
 from pyboy_environment.environments.pokemon.tasks.catch import PokemonCatch
 from pyboy_environment.environments.pokemon.tasks.brock import PokemonBrock
 
+
 def make(
     domain: str,
     task: str,

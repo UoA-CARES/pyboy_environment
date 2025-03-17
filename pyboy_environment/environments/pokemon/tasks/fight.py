@@ -1,6 +1,8 @@
 import numpy as np
 
-from pyboy_environment.environments.pokemon.pokemon_environment import PokemonEnvironment
+from pyboy_environment.environments.pokemon.pokemon_environment import (
+    PokemonEnvironment,
+)
 
 # rewards
 DO_NOTHING_BASE = -1
@@ -40,7 +42,9 @@ class PokemonFight(PokemonEnvironment):
         reward = DO_NOTHING_BASE
         reward += self._xp_increase_reward(new_state, multiplier=XP_MULTIPLIER)
         reward += self._deal_damage_reward(new_state, multiplier=DEAL_DAMAGE_MULTIPLIER)
-        reward += self._levels_increase_reward(new_state, multiplier=LEVEL_UP_MULTIPLIER)
+        reward += self._levels_increase_reward(
+            new_state, multiplier=LEVEL_UP_MULTIPLIER
+        )
         reward += self._start_battle_reward(new_state, reward=START_BATTLE_REWARD)
         return reward
 

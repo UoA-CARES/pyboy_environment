@@ -43,16 +43,14 @@ def main(argv):
 
     env = Suite.make(argv[0], argv[1], 24, headless=False, discrete=True)
 
-    env.step(3) # initial step to load screen
+    env.step(3)  # initial step to load screen
 
     while True:
         index = wait_for_input()
         if index == -1:
             continue
         [state, reward, done, truncated] = env.step(index)
-        print(
-            f"\rReward: {reward}"
-        )
+        print(f"\rReward: {reward}")
 
 
 if __name__ == "__main__":

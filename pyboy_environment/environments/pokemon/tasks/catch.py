@@ -1,6 +1,8 @@
 import numpy as np
 
-from pyboy_environment.environments.pokemon.pokemon_environment import PokemonEnvironment
+from pyboy_environment.environments.pokemon.pokemon_environment import (
+    PokemonEnvironment,
+)
 
 # rewards
 DO_NOTHING_BASE = -1
@@ -11,6 +13,7 @@ BUY_POKEBALL_REWARD = 100
 
 # other params
 num_steps_truncate = 1000
+
 
 class PokemonCatch(PokemonEnvironment):
     def __init__(
