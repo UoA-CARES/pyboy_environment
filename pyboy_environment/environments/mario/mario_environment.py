@@ -1,5 +1,5 @@
 """
-The link below has all the ROM memory data for Super Mario Land. 
+The link below has all the ROM memory data for Super Mario Land.
 It is used to extract the game state for the MarioEnvironment class.
 
 https://datacrystal.tcrf.net/wiki/Super_Mario_Land/RAM_map

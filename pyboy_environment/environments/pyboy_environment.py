@@ -2,9 +2,18 @@ from abc import ABCMeta, abstractmethod
 from functools import cached_property
 from pathlib import Path
 
+import logging
 import cv2
 import numpy as np
 from pyboy import PyBoy
+
+import signal
+
+
+def sig_handler(signum, frame):
+    logging.info("Seg faulted :(")
+    logging.info(f"Seg faulted: {signum}, {frame}")
+    raise RuntimeError("Seg fault")
 
 
 class PyboyEnvironment(metaclass=ABCMeta):
@@ -21,6 +30,8 @@ class PyboyEnvironment(metaclass=ABCMeta):
         emulation_speed: int = 0,
         headless: bool = False,
     ) -> None:
+        signal.signal(signal.SIGSEGV, sig_handler)
+
         self.task = task
         self.domain = domain
 
@@ -36,10 +47,14 @@ class PyboyEnvironment(metaclass=ABCMeta):
 
         self.act_freq = act_freq
 
+        self.headless = headless
+
         head = "null" if headless else "SDL2"
         self.pyboy = PyBoy(
             self.rom_path,
             window=head,
+            sound_emulated=False,
+            no_input=True,
         )
 
         self.prior_game_stats = self._generate_game_stats()

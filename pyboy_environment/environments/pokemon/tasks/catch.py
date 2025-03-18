@@ -1,12 +1,18 @@
-from functools import cached_property
-
 import numpy as np
-from pyboy.utils import WindowEvent
 
 from pyboy_environment.environments.pokemon.pokemon_environment import (
     PokemonEnvironment,
 )
-from pyboy_environment.environments.pokemon import pokemon_constants as pkc
+
+# rewards
+DO_NOTHING_BASE = -1
+START_BATTLE_REWARD = 10
+THROW_POKEBALL_REWARD = 100
+CATCH_POKEMON_REWARD = 500
+BUY_POKEBALL_REWARD = 100
+
+# other params
+num_steps_truncate = 1000
 
 
 class PokemonCatch(PokemonEnvironment):
@@ -15,50 +21,34 @@ class PokemonCatch(PokemonEnvironment):
         act_freq: int,
         emulation_speed: int = 0,
         headless: bool = False,
+        discrete: bool = False,
     ) -> None:
-
-        # We don't include start button here because we don't need it for this task
-        valid_actions: list[WindowEvent] = [
-            WindowEvent.PRESS_ARROW_DOWN,
-            WindowEvent.PRESS_ARROW_LEFT,
-            WindowEvent.PRESS_ARROW_RIGHT,
-            WindowEvent.PRESS_ARROW_UP,
-            WindowEvent.PRESS_BUTTON_A,
-            WindowEvent.PRESS_BUTTON_B,
-        ]
-
-        release_button: list[WindowEvent] = [
-            WindowEvent.RELEASE_ARROW_DOWN,
-            WindowEvent.RELEASE_ARROW_LEFT,
-            WindowEvent.RELEASE_ARROW_RIGHT,
-            WindowEvent.RELEASE_ARROW_UP,
-            WindowEvent.RELEASE_BUTTON_A,
-            WindowEvent.RELEASE_BUTTON_B,
-        ]
 
         super().__init__(
             act_freq=act_freq,
             task="catch",
+            init_name="outside_pokemart.state",
             emulation_speed=emulation_speed,
-            valid_actions=valid_actions,
-            release_button=release_button,
             headless=headless,
+            discrete=discrete,
         )
 
     def _get_state(self) -> np.ndarray:
         # Implement your state retrieval logic here
-        pass
+        return np.array([])
 
     def _calculate_reward(self, new_state: dict) -> float:
         # Implement your reward calculation logic here
-        return self._caught_reward(new_state)
+        reward = DO_NOTHING_BASE
+        reward += self._start_battle_reward(new_state)
+        reward += self._throw_pokeball_reward(new_state, reward=THROW_POKEBALL_REWARD)
+        reward += self._catch_pokemon_reward(new_state, reward=CATCH_POKEMON_REWARD)
+        reward += self._buy_pokeball_reward(new_state, reward=BUY_POKEBALL_REWARD)
+        return reward
 
     def _check_if_done(self, game_stats: dict[str, any]) -> bool:
-        # Setting done to true if agent beats first gym (temporary)
-        return game_stats["party_size"] > self.prior_game_stats["party_size"]
+        return False
 
     def _check_if_truncated(self, game_stats: dict) -> bool:
         # Implement your truncation check logic here
-
-        # Maybe if we run out of pokeballs...? or a max step count
-        return self.steps >= 1000
+        return self.steps >= num_steps_truncate
