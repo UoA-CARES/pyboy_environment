@@ -122,8 +122,7 @@ class PokemonEnvironment(PyboyEnvironment):
 
         # Push the button for a few ticks to ensure action is registered
         self.pyboy.button(self.action_names[pyboy_action_idx], actionable_ticks)
-        for _ in range(self.act_freq):
-            self.pyboy.tick()
+        self.pyboy.tick(self.act_freq)
 
     @abstractmethod
     def _calculate_reward(self, new_state: dict) -> float:
