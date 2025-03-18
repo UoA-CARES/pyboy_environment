@@ -39,8 +39,6 @@ class PokemonEnvironment(PyboyEnvironment):
             WindowEvent.RELEASE_BUTTON_B,
         ]
 
-        self.action_names = ["Down", "Left", "Right", "Up", "A", "B"]
-
         super().__init__(
             task=task,
             rom_name="PokemonRed.gb",
@@ -120,9 +118,15 @@ class PokemonEnvironment(PyboyEnvironment):
         if pyboy_action_idx >= len(self.valid_actions):
             pyboy_action_idx = len(self.valid_actions) - 1
 
-        # Push the button for a few ticks to ensure action is registered
-        self.pyboy.button(self.action_names[pyboy_action_idx], actionable_ticks)
-        self.pyboy.tick(self.act_freq)
+        # At 2 ticks the agent can change direction it is looking on the spot
+        # At 3 ticks the behaviour is not consistent
+        # At 4 and more ticks the agent can change direction only by moving in that direction
+        action_ticks = 4
+        self.pyboy.send_input(self.valid_actions[pyboy_action_idx])
+        self.pyboy.tick(action_ticks, render=False, sound=False)
+        
+        self.pyboy.send_input(self.release_button[pyboy_action_idx])
+        self.pyboy.tick(self.act_freq - action_ticks, sound=False)
 
     @abstractmethod
     def _calculate_reward(self, new_state: dict) -> float:
