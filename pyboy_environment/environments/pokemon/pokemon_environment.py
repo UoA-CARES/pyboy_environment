@@ -6,7 +6,7 @@ from pyboy.utils import WindowEvent
 
 from pyboy_environment.environments.pyboy_environment import PyboyEnvironment
 from pyboy_environment.environments.pokemon import pokemon_constants as pkc
-
+from pyboy_environment.state_display import StateDisplay
 
 class PokemonEnvironment(PyboyEnvironment):
     def __init__(
@@ -20,6 +20,9 @@ class PokemonEnvironment(PyboyEnvironment):
     ) -> None:
 
         self.discrete = discrete
+
+        if not headless:
+            self.state_display = StateDisplay()        
 
         valid_actions: list[WindowEvent] = [
             WindowEvent.PRESS_ARROW_DOWN,
@@ -165,6 +168,9 @@ class PokemonEnvironment(PyboyEnvironment):
             "events": self._read_events(),
             "items": self._read_items(),
         }
+        if not self.headless:
+            self.state_display.update_display(stats)
+            
         return stats
 
     def _get_location(self) -> dict[str, any]:
