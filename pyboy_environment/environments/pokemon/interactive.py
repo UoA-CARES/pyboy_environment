@@ -77,18 +77,20 @@ def main(argv: list[str]):
         if key in key_mapping.keys():
             action_event, action_name = key_mapping[key]
 
-            if (action_event not in env.valid_actions):
-                print(f"Failed to execute action: {action_name}. Valid PyBoy action received but is not a valid environment action\r")
+            if action_event not in env.valid_actions:
+                print(
+                    f"Failed to execute action: {action_name}. Valid PyBoy action received but is not a valid environment action\r"
+                )
                 continue
-            
+
             action_index = env.valid_actions.index(action_event)
             _, reward, _, _ = env.step(action_index)
             print(f"Action: {action_name:5} | Reward: {reward}\r")
-        elif key in ('x', 'z'):
+        elif key in ("x", "z"):
             name = input("Enter name: ")
-            mode = "rb" if key == 'x' else "wb"
+            mode = "rb" if key == "x" else "wb"
             manage_state(name, states_dir, mode, env)
-        elif key == 'q':
+        elif key == "q":
             print("Exiting...")
             break
         else:
