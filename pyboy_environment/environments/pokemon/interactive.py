@@ -2,15 +2,14 @@ import os
 import sys
 import termios
 import tty
-import readline  # this import is used behind the scenes to enable input()
+import readline  # DO NOT DELETE - input() needs readline to work properly
 
-from pyboy.utils import WindowEvent
-from pyboy.utils import PyBoyInvalidInputException
-import pyboy_environment.suite as Suite
+from pyboy.utils import WindowEvent, PyBoyInvalidInputException
 from pyboy_environment.environments.pyboy_environment import PyboyEnvironment
+import pyboy_environment.suite as Suite
 
 
-def get_action_key():
+def get_action_key() -> str | any:
     """Captures a single keypress from the user."""
     fd = sys.stdin.fileno()
     old_settings = termios.tcgetattr(fd)
@@ -62,35 +61,34 @@ def main(argv: list[str]):
         print("Usage: interactive.py <domain> <task>")
         sys.exit(1)
 
-    # Set up environment
-    env = Suite.make(argv[0], argv[1], 24, headless=False, discrete=True)
-    env.step(3)  # Update to ascertain env A button index
-
     # Set up directory for saving/loading states
     states_dir = os.path.expanduser(f"~/cares_rl_configs/{argv[0]}/interactive_states")
     if not os.path.exists(states_dir):
         os.makedirs(states_dir)
 
-    print("\rWaiting for user input (Press 'q' to quit)...\r")
+    # Set up environment
+    env = Suite.make(argv[0], argv[1], 24, headless=False, discrete=True)
+    env.step(env.valid_actions.index(WindowEvent.PRESS_BUTTON_A))
+
+    print("\rEnvironment ready, waiting for user input (Press 'q' to quit)...\r")
     while True:
         key = get_action_key()
 
         if key in key_mapping.keys():
-            try:
-                action_index = env.valid_actions.index(key_mapping[key][0])
-                _, reward, _, _ = env.step(
-                    action_index
-                )  # need to convert key into action index based on env.valid_actions
-                print(f"Action: {key_mapping[key][1]:5} | Reward: {reward}\r")
-            except ValueError:
-                print(f"Valid PyBoy action but not for current environment\r")
-        elif key in ("x", "z"):
+            action_event, action_name = key_mapping[key]
+
+            if (action_event not in env.valid_actions):
+                print(f"Failed to execute action: {action_name}. Valid PyBoy action received but is not a valid environment action\r")
+                continue
+            
+            action_index = env.valid_actions.index(action_event)
+            _, reward, _, _ = env.step(action_index)
+            print(f"Action: {action_name:5} | Reward: {reward}\r")
+        elif key in ('x', 'z'):
             name = input("Enter name: ")
-            if key == "x":
-                manage_state(name, states_dir, "rb", env)
-            else:
-                manage_state(name, states_dir, "wb", env)
-        elif key == "q":
+            mode = "rb" if key == 'x' else "wb"
+            manage_state(name, states_dir, mode, env)
+        elif key == 'q':
             print("Exiting...")
             break
         else:
