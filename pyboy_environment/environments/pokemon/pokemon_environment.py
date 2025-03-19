@@ -124,7 +124,7 @@ class PokemonEnvironment(PyboyEnvironment):
         action_ticks = 4
         self.pyboy.send_input(self.valid_actions[pyboy_action_idx])
         self.pyboy.tick(action_ticks, render=False, sound=False)
-        
+
         self.pyboy.send_input(self.release_button[pyboy_action_idx])
         self.pyboy.tick(self.act_freq - action_ticks, sound=False)
 
