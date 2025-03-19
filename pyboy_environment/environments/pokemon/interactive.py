@@ -8,6 +8,7 @@ from pyboy.utils import WindowEvent, PyBoyInvalidInputException
 from pyboy_environment.environments.pyboy_environment import PyboyEnvironment
 import pyboy_environment.suite as Suite
 
+
 def get_action_key() -> str | any:
     """Captures a single keypress from the user."""
     fd = sys.stdin.fileno()
@@ -21,6 +22,7 @@ def get_action_key() -> str | any:
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
     return key
+
 
 def manage_state(name: str, dir: os.PathLike, mode: str, env: PyboyEnvironment):
     """Handles saving and loading of PyBoy state."""
@@ -39,6 +41,7 @@ def manage_state(name: str, dir: os.PathLike, mode: str, env: PyboyEnvironment):
                 print(f"\rSaved state as: {name}\r")
     except (PyBoyInvalidInputException, IOError) as e:
         print(f"\rError {'loading' if mode == 'rb' else 'saving'} state: {e}\r")
+
 
 def main(argv: list[str]):
     key_mapping = {
@@ -92,6 +95,7 @@ def main(argv: list[str]):
             break
         else:
             print(f"Unknown input: {key}\r")
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])
