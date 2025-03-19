@@ -2,116 +2,96 @@ import os
 import sys
 import termios
 import tty
-import time
+import readline # this import is used behind the scenes to enable input()
 
-import pyboy_environment.suite as Suite
+from pyboy.utils import WindowEvent
 from pyboy.utils import PyBoyInvalidInputException
+import pyboy_environment.suite as Suite
+from pyboy_environment.environments.pyboy_environment import PyboyEnvironment
 
 
-def wait_for_input():
-    """
-    Waits for user input and maps it to a corresponding action or state index.
-    Returns a tuple (action_index, state_index).
-    """
-    key_mapping = {
-        "\x1b[A": 3,  # UP arrow
-        "\x1b[B": 0,  # DOWN arrow
-        "\x1b[C": 2,  # RIGHT arrow
-        "\x1b[D": 1,  # LEFT arrow
-        "a": 4,       # A button
-        "b": 5,       # B button
-        "x": 6,       # Load state
-        "z": 7,       # Save state
-    }
-
+def get_action_key():
+    """Captures a single keypress from the user."""
     fd = sys.stdin.fileno()
     old_settings = termios.tcgetattr(fd)
-    state_id = None
-
     try:
         tty.setraw(fd)
         key = sys.stdin.read(1)
-
-        # Handle arrow keys and special inputs
+        
         if key == "\x1b":
             key += sys.stdin.read(2)
-        elif key in ["x", "z"]:
-            print('\rPlease enter the state index (0-9): ', end='', flush=True)
-            state_id = int(sys.stdin.read(1))
-
-        time.sleep(0.1)
-    except Exception:
-        return -1, None
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+    return key
 
-    action_index = key_mapping.get(key)
-    if action_index is None:
-        print(f"\rUnknown key: {key}\r")
-        return -1, None
+def manage_state(name: str, dir: os.PathLike, mode: str, env: PyboyEnvironment):
+    """Handles saving and loading of PyBoy state."""
+    if not name.endswith(".state"):
+        name = f"{name}.state"
+    state_path = os.path.join(dir, name)
+    
 
-    return action_index, state_id
+    try:
+        with open(state_path, mode) as f:
+            if (mode == "rb"):
+                env.pyboy.load_state(f)
+                env.pyboy.tick(4)
+                print(f"\rLoaded state: {name}\r")
+            elif (mode == "wb"):
+                env.pyboy.save_state(f)
+                print(f"\rSaved state as: {name}\r")
+    except (PyBoyInvalidInputException, IOError) as e:
+        print(f"\rError {'loading' if mode == 'rb' else 'saving'} state: {e}\r")
 
-
-def main(argv):
-    """
-    Main function to run the interactive environment.
-    """
-    actions = {
-        0: "DOWN",
-        1: "LEFT",
-        2: "RIGHT",
-        3: "UP",
-        4: "A",
-        5: "B",
+def main(argv: list[str]):
+    key_mapping = {
+        "\x1b[A": [WindowEvent.PRESS_ARROW_UP ,'UP'],
+        "\x1b[B": [WindowEvent.PRESS_ARROW_DOWN, 'DOWN'],
+        "\x1b[C": [WindowEvent.PRESS_ARROW_RIGHT, 'RIGHT'],
+        "\x1b[D": [WindowEvent.PRESS_ARROW_LEFT ,'LEFT'],
+        "a": [WindowEvent.PRESS_BUTTON_A, 'A'],
+        "b": [WindowEvent.PRESS_BUTTON_B, 'B'],
+        "\b": [WindowEvent.PRESS_BUTTON_SELECT, 'SELECT'],
+        "\x7f": [WindowEvent.PRESS_BUTTON_SELECT, 'SELECT'],
+        "\r": [WindowEvent.PRESS_BUTTON_START, 'START'],
+        "\n": [WindowEvent.PRESS_BUTTON_START, 'START'],
     }
 
     if len(argv) < 2:
         print("Usage: interactive.py <domain> <task>")
         sys.exit(1)
 
-    states_dir = os.path.expanduser("~/cares_rl_configs/pokemon/interactive_states")
+    # Set up environment
     env = Suite.make(argv[0], argv[1], 24, headless=False, discrete=True)
+    env.step(3) # Update to ascertain env A button index
 
-    # Perform an initial step to load the screen
-    env.step(3)
+    # Set up directory for saving/loading states
+    states_dir = os.path.expanduser(f"~/cares_rl_configs/{argv[0]}/interactive_states")
+    if not os.path.exists(states_dir):
+        os.makedirs(states_dir)
 
+    print("\rWaiting for user input (Press 'q' to quit)...\r")
     while True:
-        action_index, state_index = wait_for_input()
-
-        if action_index == -1:
-            # Ignore unrecognized inputs
-            continue
-
-        if action_index == 6 and state_index is not None:  # Load state
-            state_file = f"{state_index}.state"
-            print(f"\rLoading state: {state_file}\r")
-
+        key = get_action_key()
+        
+        if key in key_mapping.keys():
             try:
-                with open(os.path.join(states_dir, state_file), "rb") as f:
-                    env.pyboy.load_state(f)
-                    env.pyboy.tick(4)
-            except (PyBoyInvalidInputException, FileNotFoundError):
-                print(f"{state_file} could not be found!\r")
-
-        elif action_index == 7 and state_index is not None:  # Save state
-            state_file = f"{state_index}.state"
-            state_file_path = os.path.join(states_dir, state_file)
-
-            print(f"\rSaving state: {state_file_path}\r")
-
-            try:
-                os.makedirs(states_dir, exist_ok=True)  # Ensure directory exists
-                with open(state_file_path, "wb") as f:
-                    env.pyboy.save_state(f)
-            except (PyBoyInvalidInputException, IOError) as e:
-                print(f"\rError saving state: {e}\r")
-
+                action_index = env.valid_actions.index(key_mapping[key][0])
+                _, reward, _, _ = env.step(action_index) # need to convert key into action index based on env.valid_actions
+                print(f"Action: {key_mapping[key][1]:5} | Reward: {reward}\r")
+            except ValueError:
+                print(f"Valid PyBoy action but not for current environment\r")
+        elif key in ('x', 'z'):
+            name = input("Enter name: ")
+            if key == 'x':
+                manage_state(name, states_dir, "rb", env)
+            else:
+                manage_state(name, states_dir, "wb", env)
+        elif key == 'q':
+            print("Exiting...")
+            break
         else:
-            # Perform an action in the environment
-            _, reward, _, _ = env.step(action_index)
-            print(f"\rAction: {actions[action_index]:5} | Reward: {reward}\r")
-
+            print(f"Unknown input: {key}\r")
 
 if __name__ == "__main__":
     main(sys.argv[1:])
