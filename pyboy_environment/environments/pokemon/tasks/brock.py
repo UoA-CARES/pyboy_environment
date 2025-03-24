@@ -1,16 +1,18 @@
+import os
 import numpy as np
 from pyboy_environment.environments.pokemon.pokemon_environment import (
     PokemonEnvironment,
 )
+from pyboy.utils import IntIOWrapper
 
 # Reward Constants
 # Larger value giving to sparser rewards
 # Smaller value giving to more frequently experiened rewards
 BASE_REWARD = -2
 IN_GRASS_REWARD = 1
-START_BATTLE_REWARD = 10
-DEAL_DAMAGE_MULTIPLIER = 10
-GAIN_XP_MULTIPLER = 10
+START_BATTLE_REWARD = 100
+DEAL_DAMAGE_MULTIPLIER = 100
+GAIN_XP_MULTIPLER = 100
 LEVEL_UP_MULTIPLIER = 1000
 MOVE_UP_REWARD = 10
 ENTER_POKEMART_REWARD = 1000
@@ -42,6 +44,7 @@ class PokemonBrock(PokemonEnvironment):
         self.tasks = [0] * NUM_TASKS
         self.tasks[0] = ACTIVE_TASK_INDICATOR
         self.current_task = 0
+        self.task_states = 0
 
         super().__init__(
             act_freq=act_freq,
@@ -199,6 +202,14 @@ class PokemonBrock(PokemonEnvironment):
 
         return state, reward, done, truncated
 
+    def _save_task_state(self, task_index: int):
+        path = os.path.dirname(self.init_path)
+        with open(os.path.join(path, f"task_{task_index}.state"), "wb") as f:
+            self.pyboy.save_state(f)
+
+        if task_index > self.task_states:
+            self.task_states = task_index
+
     ################################################################
     ####################### Reward Functions #######################
     ################################################################
@@ -323,6 +334,7 @@ class PokemonBrock(PokemonEnvironment):
 
         if task_diff == 1:
             self.steps = self.steps - TASK_COMPLETION_EXTRA_STEPS * task
+            self._save_task_state(task + 1)
 
         return reward + task_diff * TASK_COMPLETION_MULTIPLIER
 
@@ -336,3 +348,22 @@ class PokemonBrock(PokemonEnvironment):
 
     def _check_if_truncated(self, game_stats: dict) -> bool:
         return self.steps >= STEPS_TRUNCATION
+    
+    # Override reset to start from different states
+    def reset(self) -> np.ndarray:
+        task_index = np.random.randint(self.task_states + 1)
+
+        if task_index == 0:
+            return super().reset()
+        
+        self.steps = 0
+
+        dir = os.path.dirname(self.init_path)
+        with open(os.path.join(dir, f"task_{task_index}.state"), "rb") as f:
+            self.pyboy.load_state(f)
+
+        self.prior_game_stats = self._generate_game_stats()
+
+        state = self._get_state_from_stats(self.prior_game_stats)
+
+        return state
