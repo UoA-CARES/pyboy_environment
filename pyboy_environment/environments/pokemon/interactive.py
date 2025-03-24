@@ -9,7 +9,7 @@ from pyboy_environment.environments.pyboy_environment import PyboyEnvironment
 import pyboy_environment.suite as Suite
 
 
-def get_action_key() -> str | any:
+def get_action_key() -> str:
     """Captures a single keypress from the user."""
     fd = sys.stdin.fileno()
     old_settings = termios.tcgetattr(fd)
@@ -68,7 +68,7 @@ def main(argv: list[str]):
 
     # Set up environment
     env = Suite.make(argv[0], argv[1], 24, headless=False, discrete=True)
-    env.step(env.valid_actions.index(WindowEvent.PRESS_BUTTON_A))
+    env.step(env.valid_actions.index(WindowEvent.PRESS_BUTTON_B))
 
     print("\rEnvironment ready, waiting for user input (Press 'q' to quit)...\r")
     while True:
