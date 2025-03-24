@@ -240,7 +240,7 @@ class PokemonBrock(PokemonEnvironment):
         return reward
 
     def _reward_task_enter_v_city(self, new_state: dict [str, any]) -> float:
-        reward = 0
+        reward = -MOVE_UP_REWARD
         if self._is_in_battle(new_state):
             reward -= IN_BATTLE_REWARD
 
@@ -250,7 +250,7 @@ class PokemonBrock(PokemonEnvironment):
         if new_state["y"] < self.prior_game_stats["y"] or (
             new_state["map_id"] == 0x0C and self.prior_game_stats["map_id"] == 00
         ):
-            return reward + MOVE_UP_REWARD
+            return MOVE_UP_REWARD
 
         return reward
 
