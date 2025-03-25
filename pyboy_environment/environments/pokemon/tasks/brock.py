@@ -14,7 +14,7 @@ START_BATTLE_REWARD = 100
 DEAL_DAMAGE_MULTIPLIER = 100
 GAIN_XP_MULTIPLER = 100
 LEVEL_UP_MULTIPLIER = 1000
-MOVE_UP_REWARD = 10
+MOVE_UP_REWARD = 100
 ENTER_POKEMART_REWARD = 1000
 PURCHASE_POKEBALL_MULTIPLIER = 500
 THROW_POKEBALL_MULTIPLIER = 100
@@ -44,7 +44,8 @@ class PokemonBrock(PokemonEnvironment):
         self.tasks = [0] * NUM_TASKS
         self.tasks[0] = ACTIVE_TASK_INDICATOR
         self.current_task = 0
-        self.task_states = 0
+        self.tasks_reached = 0
+        self.task_prior_states = [None] * NUM_TASKS
 
         super().__init__(
             act_freq=act_freq,
@@ -207,8 +208,20 @@ class PokemonBrock(PokemonEnvironment):
         with open(os.path.join(path, f"task_{task_index}.state"), "wb") as f:
             self.pyboy.save_state(f)
 
-        if task_index > self.task_states:
-            self.task_states = task_index
+        if task_index > self.tasks_reached:
+            self.tasks_reached = task_index
+
+        self.task_prior_states[task_index] = self.prior_game_stats
+
+    def _load_task_state(self, task_index: int):
+        dir = os.path.dirname(self.init_path)
+        with open(os.path.join(dir, f"task_{task_index}.state"), "rb") as f:
+            self.pyboy.load_state(f)
+
+        self.prior_game_stats = self.task_prior_states[task_index]
+        stats = self._generate_game_stats()
+        return self._get_state_from_stats(stats)
+
 
     ################################################################
     ####################### Reward Functions #######################
@@ -240,19 +253,18 @@ class PokemonBrock(PokemonEnvironment):
         return reward
 
     def _reward_task_enter_v_city(self, new_state: dict [str, any]) -> float:
-        reward = -MOVE_UP_REWARD
         if self._is_in_battle(new_state):
-            reward -= IN_BATTLE_REWARD
+            return -IN_BATTLE_REWARD
 
         if new_state["map_id"] != 0x0C and new_state["map_id"] != 0x00:
-            return reward
+            return 0
 
         if new_state["y"] < self.prior_game_stats["y"] or (
             new_state["map_id"] == 0x0C and self.prior_game_stats["map_id"] == 00
         ):
             return MOVE_UP_REWARD
 
-        return reward
+        return 0
 
     def _reward_task_enter_pokemart(self, new_state: dict) -> float:
         if self.prior_game_stats["map_id"] != 0x2A and new_state["map_id"] == 0x2A:
@@ -350,20 +362,12 @@ class PokemonBrock(PokemonEnvironment):
         return self.steps >= STEPS_TRUNCATION
     
     # Override reset to start from different states
-    def reset(self) -> np.ndarray:
-        task_index = np.random.randint(self.task_states + 1)
+    def reset(self, training: bool = True) -> np.ndarray:
+        task_index = np.random.randint(self.tasks_reached + 1)
 
-        if task_index == 0:
+        if task_index == 0 or not training:
             return super().reset()
         
         self.steps = 0
 
-        dir = os.path.dirname(self.init_path)
-        with open(os.path.join(dir, f"task_{task_index}.state"), "rb") as f:
-            self.pyboy.load_state(f)
-
-        self.prior_game_stats = self._generate_game_stats()
-
-        state = self._get_state_from_stats(self.prior_game_stats)
-
-        return state
+        return self._load_task_state(task_index)
