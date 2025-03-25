@@ -14,7 +14,7 @@ START_BATTLE_REWARD = 100
 DEAL_DAMAGE_MULTIPLIER = 100
 GAIN_XP_MULTIPLER = 100
 LEVEL_UP_MULTIPLIER = 1000
-MOVE_UP_REWARD = 100
+MOVE_UP_REWARD = 10
 ENTER_POKEMART_REWARD = 1000
 PURCHASE_POKEBALL_MULTIPLIER = 500
 THROW_POKEBALL_MULTIPLIER = 100
@@ -264,7 +264,7 @@ class PokemonBrock(PokemonEnvironment):
         ):
             return MOVE_UP_REWARD
 
-        return 0
+        return -MOVE_UP_REWARD
 
     def _reward_task_enter_pokemart(self, new_state: dict) -> float:
         if self.prior_game_stats["map_id"] != 0x2A and new_state["map_id"] == 0x2A:
