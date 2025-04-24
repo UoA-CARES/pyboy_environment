@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="pyboy_environment",
-    version="",
+    version="0.1",
     packages=find_packages(),
     url="",
     license="",
