@@ -33,6 +33,12 @@ class PokemonFight(PokemonEnvironment):
             discrete=discrete,
         )
 
+    def reset(self, training: bool = True) -> np.ndarray:
+        return super().reset()
+
+    def get_overlay_info(self) -> dict:
+        return {}
+
     def _get_state(self) -> np.ndarray:
         # Implement your state retrieval logic here
         return np.array([])

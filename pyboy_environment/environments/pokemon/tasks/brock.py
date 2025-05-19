@@ -178,14 +178,14 @@ class PokemonBrock(PokemonEnvironment):
         return state
 
     def _get_state_from_stats(self, game_stats: dict) -> np.ndarray:
-        state = []
-        for value in game_stats.values():
-            if isinstance(value, list):
-                for i in value:
-                    state.append(i)
-            else:
-                state.append(value)
-        return np.array(np.array(state))
+        # state = []
+        # for value in game_stats.values():
+        #     if isinstance(value, list):
+        #         for i in value:
+        #             state.append(i)
+        #     else:
+        #         state.append(value)
+        return np.array(np.array(game_stats["tasks"]))
 
     def step(self, action) -> tuple:
         self.steps += 1
