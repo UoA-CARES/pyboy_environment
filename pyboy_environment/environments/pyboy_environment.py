@@ -55,6 +55,7 @@ class PyboyEnvironment(metaclass=ABCMeta):
             window=head,
             sound_emulated=False,
             no_input=True,
+            title_status=True,
         )
 
         self.prior_game_stats = self._generate_game_stats()
