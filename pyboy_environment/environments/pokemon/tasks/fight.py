@@ -21,7 +21,6 @@ class PokemonFight(PokemonEnvironment):
         act_freq: int,
         emulation_speed: int = 0,
         headless: bool = False,
-        discrete: bool = False,
     ) -> None:
 
         super().__init__(
@@ -30,7 +29,6 @@ class PokemonFight(PokemonEnvironment):
             init_name="has_pokedex.state",
             emulation_speed=emulation_speed,
             headless=headless,
-            discrete=discrete,
         )
 
     def reset(self, training: bool = True) -> np.ndarray:

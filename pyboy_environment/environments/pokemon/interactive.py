@@ -67,7 +67,7 @@ def main(argv: list[str]):
         os.makedirs(states_dir)
 
     # Set up environment
-    env = Suite.make(argv[0], argv[1], 24, headless=False, discrete=True)
+    env = Suite.make(argv[0], argv[1], 24, headless=False)
     env.step(env.valid_actions.index(WindowEvent.PRESS_BUTTON_B))
 
     print("\rEnvironment ready, waiting for user input (Press 'q' to quit)...\r")

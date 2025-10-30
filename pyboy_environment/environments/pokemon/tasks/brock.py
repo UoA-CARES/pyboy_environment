@@ -8,27 +8,28 @@ from pyboy.utils import IntIOWrapper
 # Reward Constants
 # Larger value giving to sparser rewards
 # Smaller value giving to more frequently experiened rewards
-BASE_REWARD = -2
-IN_GRASS_REWARD = 1
-START_BATTLE_REWARD = 100
-DEAL_DAMAGE_MULTIPLIER = 100
-GAIN_XP_MULTIPLER = 100
-LEVEL_UP_MULTIPLIER = 1000
-MOVE_UP_REWARD = 10
-ENTER_POKEMART_REWARD = 1000
-PURCHASE_POKEBALL_MULTIPLIER = 500
-THROW_POKEBALL_MULTIPLIER = 100
-CATCH_POKEMON_REWARD = 1000
-TASK_COMPLETION_MULTIPLIER = 10000
-MOVE_CLOSER_TO_GYM_REWARD = 10000
-IN_BATTLE_REWARD = 2
+BASE_REWARD = -1
+IN_GRASS_REWARD = 0.1
+START_BATTLE_REWARD = 1
+DEAL_DAMAGE_MULTIPLIER = 0.01
+GAIN_XP_MULTIPLIER = 0.01
+LEVEL_UP_MULTIPLIER = 1
+OUT_OF_LAB_REWARD = 0.5
+MOVE_TO_V_CITY_REWARD = 0.8
+ENTER_POKEMART_REWARD = 0.5
+PURCHASE_POKEBALL_MULTIPLIER = 0.5
+THROW_POKEBALL_MULTIPLIER = 0.2
+CATCH_POKEMON_REWARD = 0.5
+TASK_COMPLETION_MULTIPLIER = 1
+MOVE_CLOSER_TO_GYM_REWARD = 0.5
+IN_BATTLE_REWARD = 0
 
 STEPS_TRUNCATION = 500
 TASK_COMPLETION_EXTRA_STEPS = 600
 LEVEL_UP_EXTRA_STEPS_MULTIPLIER = 10
 FIND_BROCK_EXTRA_STEPS = 200
 
-ACTIVE_TASK_INDICATOR = 10000
+ACTIVE_TASK_INDICATOR = 100
 
 NUM_TASKS = 8
 
@@ -39,7 +40,6 @@ class PokemonBrock(PokemonEnvironment):
         act_freq: int,
         emulation_speed: int = 0,
         headless: bool = False,
-        discrete: bool = False,
     ) -> None:
         self.tasks = [0] * NUM_TASKS
         self.tasks[0] = ACTIVE_TASK_INDICATOR
@@ -53,7 +53,6 @@ class PokemonBrock(PokemonEnvironment):
             init_name="has_pokedex.state",
             emulation_speed=emulation_speed,
             headless=headless,
-            discrete=discrete,
         )
 
     ################################################################
@@ -201,7 +200,7 @@ class PokemonBrock(PokemonEnvironment):
 
         self.prior_game_stats = current_game_stats
 
-        return state, reward, done, truncated
+        return state, reward, done, truncated, {}
 
     def _save_task_state(self, task_index: int):
         path = os.path.dirname(self.init_path)
@@ -218,6 +217,8 @@ class PokemonBrock(PokemonEnvironment):
         with open(os.path.join(dir, f"task_{task_index}.state"), "rb") as f:
             self.pyboy.load_state(f)
 
+        if self.task_prior_states[task_index] is None:
+            self.task_prior_states[task_index] = self._generate_game_stats()
         self.prior_game_stats = self.task_prior_states[task_index]
         stats = self._generate_game_stats()
         return self._get_state_from_stats(stats)
@@ -227,7 +228,7 @@ class PokemonBrock(PokemonEnvironment):
     ####################### Reward Functions #######################
     ################################################################
 
-    ### Override to include custom step logic
+    ### Override to include custom logic for updating steps in episode
     def _levels_reward(self, new_state: dict[str, any]) -> float:
         reward = 0
         new_levels = new_state["levels"]
@@ -248,7 +249,7 @@ class PokemonBrock(PokemonEnvironment):
         reward = self._is_in_grass_reward(reward=IN_GRASS_REWARD)
         reward += self._start_battle_reward(new_state, reward=START_BATTLE_REWARD)
         reward += self._deal_damage_reward(new_state, multiplier=DEAL_DAMAGE_MULTIPLIER)
-        reward += self._xp_increase_reward(new_state, multiplier=GAIN_XP_MULTIPLER)
+        reward += self._xp_increase_reward(new_state, multiplier=GAIN_XP_MULTIPLIER)
         reward += self._levels_reward(new_state)
         return reward
 
@@ -257,14 +258,14 @@ class PokemonBrock(PokemonEnvironment):
             return -IN_BATTLE_REWARD
 
         if new_state["map_id"] != 0x0C and new_state["map_id"] != 0x00:
-            return 0
+            return -0.1
 
-        if new_state["y"] < self.prior_game_stats["y"] or (
+        if (new_state["y"] <= self.prior_game_stats["y"] and new_state["map_id"] == 0x0C) or (
             new_state["map_id"] == 0x0C and self.prior_game_stats["map_id"] == 00
         ):
-            return MOVE_UP_REWARD
+            return MOVE_TO_V_CITY_REWARD
 
-        return -MOVE_UP_REWARD
+        return 0
 
     def _reward_task_enter_pokemart(self, new_state: dict) -> float:
         if self.prior_game_stats["map_id"] != 0x2A and new_state["map_id"] == 0x2A:
