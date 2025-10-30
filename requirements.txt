@@ -1,6 +1,7 @@
 numpy==1.26.4
+cython==3.0.12
 opencv-contrib-python==4.6.0.66
-pyboy==2.5.1
+pyboy==2.6.0
 scipy==1.12.0
 matplotlib==3.8.3
 pytest==7.4.2
