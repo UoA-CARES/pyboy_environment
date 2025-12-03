@@ -41,7 +41,7 @@ class MarioEnvironment(PyboyEnvironment, metaclass=ABCMeta):
     def _get_state(self) -> np.ndarray:
         # TODO parameter as to whether to flatten this view or not
         # TODO image based being frame or game area frame...
-        return self.game_area().flatten().tolist()
+        return np.array(self.game_area().flatten().tolist())
 
     def _generate_game_stats(self) -> dict[str, int]:
         return {

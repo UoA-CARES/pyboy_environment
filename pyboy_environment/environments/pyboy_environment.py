@@ -69,6 +69,11 @@ class PyboyEnvironment(metaclass=ABCMeta):
 
         self.reset()
 
+    def sample_action(self) -> list[int]:
+        length = len(self.valid_actions)
+        random_index = np.random.randint(0, length)
+        return np.array([random_index])
+
     def set_seed(self, seed: int) -> None:
         self.seed = seed
         # There isn't a random element to set that I am aware of...
@@ -78,6 +83,8 @@ class PyboyEnvironment(metaclass=ABCMeta):
 
         with open(self.init_path, "rb") as f:
             self.pyboy.load_state(f)
+
+        self.pyboy.tick(10, sound=False)
 
         self.prior_game_stats = self._generate_game_stats()
 
@@ -108,7 +115,7 @@ class PyboyEnvironment(metaclass=ABCMeta):
 
         self.prior_game_stats = current_game_stats
 
-        return state, reward, done, truncated
+        return state, reward, done, truncated, {}
 
     def _read_m(self, addr: int) -> int:
         return self.pyboy.memory[addr]

@@ -45,16 +45,26 @@ def manage_state(name: str, dir: os.PathLike, mode: str, env: PyboyEnvironment):
 
 def main(argv: list[str]):
     key_mapping = {
-        "\x1b[A": [WindowEvent.PRESS_ARROW_UP, "UP"],
-        "\x1b[B": [WindowEvent.PRESS_ARROW_DOWN, "DOWN"],
-        "\x1b[C": [WindowEvent.PRESS_ARROW_RIGHT, "RIGHT"],
-        "\x1b[D": [WindowEvent.PRESS_ARROW_LEFT, "LEFT"],
-        "a": [WindowEvent.PRESS_BUTTON_A, "A"],
-        "b": [WindowEvent.PRESS_BUTTON_B, "B"],
-        "\b": [WindowEvent.PRESS_BUTTON_SELECT, "SELECT"],
-        "\x7f": [WindowEvent.PRESS_BUTTON_SELECT, "SELECT"],
-        "\r": [WindowEvent.PRESS_BUTTON_START, "START"],
-        "\n": [WindowEvent.PRESS_BUTTON_START, "START"],
+        "\x1b[A": [[WindowEvent.PRESS_ARROW_UP], "UP"],
+        "8": [[WindowEvent.PRESS_ARROW_UP], "UP"],
+        "\x1b[B": [[WindowEvent.PRESS_ARROW_DOWN], "DOWN"],
+        "2": [[WindowEvent.PRESS_ARROW_DOWN], "DOWN"],
+        "\x1b[C": [[WindowEvent.PRESS_ARROW_RIGHT], "RIGHT"],
+        "6": [[WindowEvent.PRESS_ARROW_RIGHT], "RIGHT"],
+        "\x1b[D": [[WindowEvent.PRESS_ARROW_LEFT], "LEFT"],
+        "4": [[WindowEvent.PRESS_ARROW_LEFT], "LEFT"],
+        "a": [[WindowEvent.PRESS_BUTTON_A], "A"],
+        "5": [[WindowEvent.PRESS_BUTTON_A], "A"],
+        "s": [[WindowEvent.PRESS_BUTTON_B], "B"],
+        "+": [[WindowEvent.PRESS_BUTTON_B], "B"],
+        "\b": [[WindowEvent.PRESS_BUTTON_SELECT], "SELECT"],
+        "\x7f": [[WindowEvent.PRESS_BUTTON_SELECT], "SELECT"],
+        "\r": [[WindowEvent.PRESS_BUTTON_START], "START"],
+        "\n": [[WindowEvent.PRESS_BUTTON_START], "START"],
+        "7": [[WindowEvent.PRESS_ARROW_LEFT, WindowEvent.PRESS_BUTTON_A], "LEFT+A"],
+        "9": [[WindowEvent.PRESS_ARROW_RIGHT, WindowEvent.PRESS_BUTTON_A], "RIGHT+A"],
+        "1": [[WindowEvent.PRESS_ARROW_LEFT, WindowEvent.PRESS_BUTTON_B], "LEFT+B"],
+        "3": [[WindowEvent.PRESS_ARROW_RIGHT, WindowEvent.PRESS_BUTTON_B], "RIGHT+B"],
     }
 
     if len(argv) < 2:
@@ -67,8 +77,8 @@ def main(argv: list[str]):
         os.makedirs(states_dir)
 
     # Set up environment
-    env = Suite.make(argv[0], argv[1], 24, headless=False)
-    env.step(env.valid_actions.index(WindowEvent.PRESS_BUTTON_B))
+    env = Suite.make(argv[0], argv[1], 4, headless=False, emulation_speed=1)
+    env.step(env.valid_actions.index([WindowEvent.PRESS_BUTTON_B]))
 
     print("\rEnvironment ready, waiting for user input (Press 'q' to quit)...\r")
     while True:
@@ -84,7 +94,7 @@ def main(argv: list[str]):
                 continue
 
             action_index = env.valid_actions.index(action_event)
-            _, reward, _, _ = env.step(action_index)
+            _, reward, _, _, _ = env.step(action_index)
             print(f"Action: {action_name:5} | Reward: {reward}\r")
         elif key in ("x", "z"):
             name = input("Enter name: ")
