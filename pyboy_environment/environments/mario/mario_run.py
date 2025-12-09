@@ -47,10 +47,7 @@ class MarioRun(MarioEnvironment):
         if image_observation:
             self._get_state = self._get_state_image
         else:
-            self._get_state = self._get_state_vector
-            
-        self.max_level_progress = 0
-        self.prev_action = []   
+            self._get_state = self._get_state_vector        
 
         super().__init__(
             act_freq=act_freq,
@@ -59,6 +56,9 @@ class MarioRun(MarioEnvironment):
             emulation_speed=emulation_speed,
             headless=headless,
         )
+
+        self.max_level_progress = 0
+        self.prev_action = []
 
 
     def _get_state_image(self) -> np.ndarray:
@@ -149,9 +149,7 @@ class MarioRun(MarioEnvironment):
             logging.debug(f"{name} reward: {reward}")
             reward_total += reward
 
-        sigmoid_reward = 1/(1+np.exp(-reward_total))
-
-        return sigmoid_reward
+        return reward_total
 
     def _position_reward(self, new_state: Dict[str, int]) -> int:
         delta_distance = new_state["x_position"] - self.max_level_progress
@@ -159,21 +157,20 @@ class MarioRun(MarioEnvironment):
         if new_state["x_position"] > self.max_level_progress:
             self.max_level_progress = new_state["x_position"]
 
-        return 0.1 * max(0, delta_distance)
+        return 10 * max(0, delta_distance)
 
     def _score_reward(self, new_state: Dict[str, int]) -> int:
         delta_score = new_state["score"] - self.prior_game_stats["score"]
         if not delta_score:
             return 0
-        # Typical score reward is 100 e.g. jumping on enemies or collecting coins
-        return 1/(1+np.exp(-delta_score/100)) 
+        return max(-100, delta_score)
 
     def _lives_reward(self, new_state: Dict[str, int]) -> int:
         delta_lives = new_state["lives"] - self.prior_game_stats["lives"]
         if not delta_lives:
             return 0
         if abs(delta_lives) > 0:
-            return delta_lives * 0.5
+            return delta_lives * 50
         else:
             return -1
 
