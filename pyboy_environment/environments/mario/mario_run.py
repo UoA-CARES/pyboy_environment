@@ -3,6 +3,7 @@ from functools import cached_property
 from typing import Dict, List
 
 import numpy as np
+from collections import deque
 from pyboy.utils import WindowEvent
 
 from pyboy_environment.environments.mario.mario_environment import MarioEnvironment
@@ -14,6 +15,7 @@ class MarioRun(MarioEnvironment):
         act_freq: int,
         emulation_speed: int = 0,
         headless: bool = False,
+        image_observation: bool = False,
     ) -> None:
 
         valid_actions: List[List[WindowEvent]] = [
@@ -39,6 +41,16 @@ class MarioRun(MarioEnvironment):
         ]
 
         self.release_button_offset = 8
+        self.stack_frames = 3
+        self.prev_frames = deque(maxlen=self.stack_frames)
+
+        if image_observation:
+            self._get_state = self._get_state_image
+        else:
+            self._get_state = self._get_state_vector
+            
+        self.max_level_progress = 0
+        self.prev_action = []   
 
         super().__init__(
             act_freq=act_freq,
@@ -48,15 +60,30 @@ class MarioRun(MarioEnvironment):
             headless=headless,
         )
 
-        self.max_level_progress = 0
-        self.prev_action = []
+
+    def _get_state_image(self) -> np.ndarray:
+        return np.array(self.game_area())[np.newaxis, ...]
+
+
+    def _get_state_vector(self) -> Dict[str, int]:
+        frame = self.game_area().flatten()
+        self.prev_frames.append(frame)
+        state = np.concatenate(self.prev_frames)
+        return state
+
 
     def reset(self, training: bool = False) -> np.ndarray:
         self.prev_action = []
+        self.prev_frames.clear()
+        self.max_level_progress = self.prior_game_stats["x_position"]
+
         state = super().reset()
-        stats = self._get_game_stats()
-        self.max_level_progress = stats["x_position"]
+        while len(self.prev_frames) < self.stack_frames:
+            self.prev_frames.append(state)
+        state = np.concatenate(self.prev_frames)
+        
         return state
+
 
     @cached_property
     def min_action_value(self) -> float:
@@ -67,8 +94,12 @@ class MarioRun(MarioEnvironment):
         return len(self.valid_actions)
 
     @cached_property
-    def observation_space(self) -> int:
-        return len(self._get_state())
+    def observation_space(self) -> int | tuple[int]:
+        shape = self._get_state().shape
+        if len(shape) > 1:
+            return shape
+        else:
+            return shape[0]
 
     @cached_property
     def action_num(self) -> int:
@@ -118,7 +149,9 @@ class MarioRun(MarioEnvironment):
             logging.debug(f"{name} reward: {reward}")
             reward_total += reward
 
-        return reward_total
+        sigmoid_reward = 1/(1+np.exp(-reward_total))
+
+        return sigmoid_reward
 
     def _position_reward(self, new_state: Dict[str, int]) -> int:
         delta_distance = new_state["x_position"] - self.max_level_progress
@@ -126,20 +159,21 @@ class MarioRun(MarioEnvironment):
         if new_state["x_position"] > self.max_level_progress:
             self.max_level_progress = new_state["x_position"]
 
-        return 10 * max(0, delta_distance)
+        return 0.1 * max(0, delta_distance)
 
     def _score_reward(self, new_state: Dict[str, int]) -> int:
         delta_score = new_state["score"] - self.prior_game_stats["score"]
         if not delta_score:
             return 0
-        return max(-100, delta_score)
+        # Typical score reward is 100 e.g. jumping on enemies or collecting coins
+        return 1/(1+np.exp(-delta_score/100)) 
 
     def _lives_reward(self, new_state: Dict[str, int]) -> int:
         delta_lives = new_state["lives"] - self.prior_game_stats["lives"]
         if not delta_lives:
             return 0
         if abs(delta_lives) > 0:
-            return delta_lives * 50
+            return delta_lives * 0.5
         else:
             return -1
 

@@ -11,11 +11,12 @@ def make(
     act_freq: int,
     emulation_speed: int = 0,
     headless: bool = False,
+    image_observation: bool = False,
 ) -> PyboyEnvironment:
 
     if domain == "mario":
         if task == "run":
-            env = MarioRun(act_freq, emulation_speed, headless)
+            env = MarioRun(act_freq, emulation_speed, headless, image_observation)
         else:
             raise ValueError(f"Unknown Mario task: {task}")
     elif domain == "pokemon":
