@@ -6,6 +6,7 @@ import logging
 import cv2
 import numpy as np
 from pyboy import PyBoy
+from pyboy.utils import WindowEvent
 
 import signal
 
@@ -84,6 +85,7 @@ class PyboyEnvironment(metaclass=ABCMeta):
         with open(self.init_path, "rb") as f:
             self.pyboy.load_state(f)
 
+        self.pyboy.send_input(WindowEvent.RELEASE_BUTTON_A)
         self.pyboy.tick(10, sound=False)
 
         self.prior_game_stats = self._generate_game_stats()
