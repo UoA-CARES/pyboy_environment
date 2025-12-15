@@ -40,9 +40,25 @@ class MarioRun(MarioEnvironment):
             WindowEvent.RELEASE_BUTTON_B,
         ]
 
+        self.actions: List[List[str]] = [
+            ["down"],
+            ["left"],
+            ["right"],
+            # ["up"],
+            ["a"],
+            ["b"],
+            ["right", "a"],
+            ["left", "a"],
+            ["right", "b"],
+            ["left", "b"],
+        ]
+
         self.release_button_offset = 8
         self.stack_frames = 3
         self.prev_frames = deque(maxlen=self.stack_frames)
+        self.max_level_progress = 0
+        self.prev_actions = deque(maxlen=3)
+        self.count = 0
 
         if image_observation:
             self._get_state = self._get_state_image
@@ -57,27 +73,25 @@ class MarioRun(MarioEnvironment):
             headless=headless,
         )
 
-        self.max_level_progress = 0
-        self.prev_action = []
-
 
     def _get_state_image(self) -> np.ndarray:
-        return np.array(self.game_area())[np.newaxis, ...]
-
+        frame = self.game_area()[np.newaxis, ...]
+        self.prev_frames.append(frame)
+        return np.concatenate(self.prev_frames)
+    
 
     def _get_state_vector(self) -> Dict[str, int]:
         frame = self.game_area().flatten()
         self.prev_frames.append(frame)
-        state = np.concatenate(self.prev_frames)
-        return state
+        return np.concatenate(self.prev_frames)
 
 
     def reset(self, training: bool = False) -> np.ndarray:
-        self.prev_action = []
-        self.prev_frames.clear()
+        super().reset()
+        self.prev_actions.clear()
         self.max_level_progress = self.prior_game_stats["x_position"]
 
-        state = super().reset()
+        state = self.prev_frames[-1]
         while len(self.prev_frames) < self.stack_frames:
             self.prev_frames.append(state)
         state = np.concatenate(self.prev_frames)
@@ -111,26 +125,30 @@ class MarioRun(MarioEnvironment):
         return np.array([random_index])
     
     def get_overlay_info(self) -> dict:
-        return {}
+        return {
+            "Action": self.prev_actions[-1] if self.prev_actions else "NULL"
+        }
 
     def _run_action_on_emulator(self, action, actionable_ticks=4) -> None:
+        # Configure action
         pyboy_action_idx = int(action)
-
-        if pyboy_action_idx >= len(self.valid_actions):
+        if pyboy_action_idx == len(self.valid_actions) + 1:
             pyboy_action_idx = len(self.valid_actions) - 1
         
-        curr_action = self.valid_actions[pyboy_action_idx]
+        curr_action = self.actions[pyboy_action_idx]
 
-        for action_event in curr_action:
-            self.pyboy.send_input(action_event)
+        # button() automatically releases after act_freq ticks unless re-pressed
+        for button in curr_action:
+            self.pyboy.button(button, self.act_freq)
 
-        for action_event in self.prev_action:
-            if action_event not in curr_action:
-                self.pyboy.send_input(action_event + self.release_button_offset)
-        
-        self.pyboy.tick(self.act_freq, sound=False)
+        self.pyboy.tick(self.act_freq - 1, sound=False)
 
-        self.prev_action = curr_action
+        if self._get_mario_on_ground():
+            self.pyboy.send_input(WindowEvent.RELEASE_BUTTON_A)
+            
+        self.pyboy.tick(1, sound=False)
+
+        self.prev_actions.append(curr_action)
 
 
     def _calculate_reward(self, new_state: Dict[str, int]) -> float:
@@ -144,39 +162,37 @@ class MarioRun(MarioEnvironment):
             "score_reward": self._score_reward(new_state),
         }
 
-        reward_total: int = -1
+        reward_total: int = -0.01
         for name, reward in reward_stats.items():
             logging.debug(f"{name} reward: {reward}")
             reward_total += reward
 
-        return reward_total
+        tanh_reward = np.tanh(reward_total)
+
+        return tanh_reward
 
     def _position_reward(self, new_state: Dict[str, int]) -> int:
         delta_distance = new_state["x_position"] - self.max_level_progress
 
-        if new_state["x_position"] > self.max_level_progress:
+        if delta_distance > 0:
             self.max_level_progress = new_state["x_position"]
+            return delta_distance * 0.1
 
-        return 10 * max(0, delta_distance)
+        return 0
 
     def _score_reward(self, new_state: Dict[str, int]) -> int:
         delta_score = new_state["score"] - self.prior_game_stats["score"]
         if not delta_score:
             return 0
-        return max(-100, delta_score)
+        # Typical score reward is 100 e.g. jumping on enemies or collecting coins
+        return delta_score * 0.1
 
     def _lives_reward(self, new_state: Dict[str, int]) -> int:
         delta_lives = new_state["lives"] - self.prior_game_stats["lives"]
         if not delta_lives:
             return 0
-        if abs(delta_lives) > 0:
-            return delta_lives * 50
         else:
-            return -1
-
-    def _time_reward(self, new_state: Dict[str, int]) -> int:
-        time_reward = min(0, (new_state["time"] - self.prior_game_stats["time"]) * 10)
-        return max(time_reward, -10)
+            return max(0, delta_lives) * 10
 
     def _check_if_done(self, game_stats):
         # Setting done to true if agent beats first level

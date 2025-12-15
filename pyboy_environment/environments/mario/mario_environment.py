@@ -66,6 +66,9 @@ class MarioEnvironment(PyboyEnvironment, metaclass=ABCMeta):
         real = (scx - 7) % 16 if (scx - 7) % 16 != 0 else 16
         real_x_position = level_block * 16 + real + mario_x
         return real_x_position
+    
+    def _get_mario_on_ground(self):
+        return self._read_m(0xC20A)
 
     def _get_time(self):
         hundreds = self._read_m(0x9831)
