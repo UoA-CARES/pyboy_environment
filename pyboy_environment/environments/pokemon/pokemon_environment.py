@@ -2,153 +2,173 @@ from functools import cached_property
 from abc import abstractmethod
 
 import numpy as np
-from pyboy.utils import WindowEvent
+from collections import deque
 
 from pyboy_environment.environments.pyboy_environment import PyboyEnvironment
 from pyboy_environment.environments.pokemon import pokemon_constants as pkc
 
+DEFAULT_ACTIONS: list[str] = [
+    "up",
+    "down",
+    "left",
+    "right",
+    "a",
+    "b",
+    "start",
+    "select",
+]
 
 class PokemonEnvironment(PyboyEnvironment):
     def __init__(
         self,
         act_freq: int,
-        task: str,
+        action_space: list = DEFAULT_ACTIONS,
+        init_state: str = "has_pokedex.state",
+        image_observation: bool = False,
+        stack_states: int = 2,
         emulation_speed: int = 0,
         headless: bool = False,
-        init_name: str = "has_pokedex.state",
     ) -> None:
-        valid_actions: list[WindowEvent] = [
-            WindowEvent.PRESS_ARROW_DOWN,
-            WindowEvent.PRESS_ARROW_LEFT,
-            WindowEvent.PRESS_ARROW_RIGHT,
-            WindowEvent.PRESS_ARROW_UP,
-            WindowEvent.PRESS_BUTTON_A,
-            WindowEvent.PRESS_BUTTON_B,
-        ]
+        if image_observation:
+            self._get_state = self._get_image_state
 
-        release_button: list[WindowEvent] = [
-            WindowEvent.RELEASE_ARROW_DOWN,
-            WindowEvent.RELEASE_ARROW_LEFT,
-            WindowEvent.RELEASE_ARROW_RIGHT,
-            WindowEvent.RELEASE_ARROW_UP,
-            WindowEvent.RELEASE_BUTTON_A,
-            WindowEvent.RELEASE_BUTTON_B,
-        ]
-
+        self.prev_states = deque(maxlen=stack_states)
+        self.prev_action = "None"
+        
         super().__init__(
-            task=task,
             rom_name="PokemonRed.gb",
             domain="pokemon",
-            init_state_file_name=init_name,
+            actions=action_space,
+            init_state_file_name=init_state,
             act_freq=act_freq,
             emulation_speed=emulation_speed,
-            valid_actions=valid_actions,
-            release_button=release_button,
             headless=headless,
         )
+
 
     ##################################################################################
     ############################## ENVIRONMENT CONTRACT ##############################
     ##################################################################################
 
+
     @cached_property
     def min_action_value(self) -> float:
         return 0
 
-    @cached_property
-    def max_action_value(self) -> float:
-        return len(self.valid_actions)
 
     @cached_property
-    def observation_space(self) -> int:
-        return len(self._get_state())
+    def max_action_value(self) -> float:
+        return len(self.actions)
+
+
+    @cached_property
+    def observation_space(self) -> int | tuple[int]:
+        shape = self._get_state().shape
+        if len(shape) > 1:
+            return shape
+        else:
+            return shape[0]
+
 
     @cached_property
     def action_num(self) -> int:
-        return 1
+        return len(self.actions)
     
-    @cached_property
-    def num_action_options(self) -> int:
-        return len(self.valid_actions)
-    
+
     def get_multimodal_observation(self) -> dict:
         return {}
 
+
     def sample_action(self) -> list[int]:
-        length = len(self.valid_actions)
+        length = self.action_num
         random_index = np.random.randint(0, length)
         return np.array([random_index])
+    
 
     def _get_state(self) -> np.ndarray:
-        # Implement your state retrieval logic here - compact state based representation
-
         game_stats = self._generate_game_stats()
-        (state,) = (
-            [
-                game_stats["location"]["x"],
-                game_stats["location"]["y"],
-                game_stats["location"]["map_id"],
-                game_stats["battle_type"],
-                game_stats["current_pokemon_health"],
-                game_stats["enemy_pokemon_health"],
-                game_stats["party_size"],
-                game_stats["caught_pokemon"],
-                game_stats["seen_pokemon"],
-            ]
-            + game_stats["hp"]["current"]
-            + game_stats["hp"]["max"]
-            + game_stats["xp"],
-        )
+        
+        state = []
+        for key in game_stats.keys():
+            value = game_stats[key]
+            if isinstance(value, list):
+                state.extend(value)
+            else:
+                state.append(value)
 
+        self.prev_states.append(np.array(state))
+
+        return np.array(state)
+
+
+    def _get_image_state(self) -> np.ndarray:
+        frame = self.screen.ndarray.transpose(2,0,1)[:1, :, :] # limit to first channel (grayscale)
+        self.prev_states.append(frame)
+        return np.concatenate(self.prev_states)
+
+
+    def reset(self) -> np.ndarray:
+        self.prev_states.clear()
+        state = super().reset()
+        self.prev_action = "None"
+
+        while len(self.prev_states) < self.prev_states.maxlen:
+            self.prev_states.append(state)
+        state = np.concatenate(self.prev_states)
+        
         return state
+    
 
-    def _run_action_on_emulator(self, action, actionable_ticks=5) -> None:
-        pyboy_action_idx = int(action)
-
-        if pyboy_action_idx >= len(self.valid_actions):
-            pyboy_action_idx = len(self.valid_actions) - 1
+    def _run_action_on_emulator(self, action: int | float) -> None:
+        """
+        Docstring for _run_action_on_emulator
+        
+        :param self: Description
+        :param action: Description
+        """
+        pyboy_action_idx = int(action) # Cast outputs of continuous algs to int
 
         # At 2 ticks the agent can change direction it is looking on the spot
         # At 3 ticks the behaviour is not consistent
         # At 4 and more ticks the agent can change direction only by moving in that direction
-        action_ticks = 4
-        self.pyboy.send_input(self.valid_actions[pyboy_action_idx])
-        self.pyboy.tick(action_ticks, render=False, sound=False)
+        delay = 4
+        self.pyboy.button(self.actions[pyboy_action_idx], delay) # Button will release after `delay` ticks 
+        self.pyboy.tick(self.act_freq, sound=False)
 
-        self.pyboy.send_input(self.release_button[pyboy_action_idx])
-        self.pyboy.tick(self.act_freq - action_ticks, sound=False)
 
     @abstractmethod
     def _calculate_reward(self, new_state: dict) -> float:
         # Implement your reward calculation logic here
         pass
 
+
     def _check_if_done(self, game_stats: dict[str, any]) -> bool:
         # Setting done to true if agent beats first gym (temporary)
         pass
+
 
     def _check_if_truncated(self, game_stats: dict) -> bool:
         # Implement your truncation check logic here
         pass
 
+
     ##################################################################################
     ############################# MEMORY READING HELPERS #############################
     ##################################################################################
 
+    
     def _generate_game_stats(self) -> dict[str, any]:
-        stats = {
-            "location": self._get_location(),
+        items = self._read_items()
+
+        game_stats = {
+            **self._get_location(),
             "battle_type": self._read_battle_type(),
             "current_pokemon_id": self._get_active_pokemon_id(),
-            "current_pokemon_health": self._get_current_pokemon_health(),
+            **self._read_party_hp(),
             "enemy_pokemon_health": self._get_enemy_pokemon_health(),
             "party_size": self._get_party_size(),
             "ids": self._read_party_id(),
-            "pokemon": [pkc.get_pokemon(id) for id in self._read_party_id()],
             "levels": self._read_party_level(),
-            "type_id": self._read_party_type(),
-            "type": [pkc.get_type(id) for id in self._read_party_type()],
-            "hp": self._read_party_hp(),
             "xp": self._read_party_xp(),
             "status": self._read_party_status(),
             "badges": self._get_badge_count(),
@@ -156,11 +176,17 @@ class PokemonEnvironment(PyboyEnvironment):
             "seen_pokemon": self._read_seen_pokemon_count(),
             "money": self._read_money(),
             "events": self._read_events(),
-            "items": self._read_items(),
+            "items": items,
+            "in_grass": self._is_in_grass_tile(),
+            "num_pokeballs": self._get_pokeball_count(items),
+            "current_selected_menu_item": self._get_current_selected_menu_item(),
         }
-        return stats
+
+        return game_stats
+
 
     def _get_location(self) -> dict[str, any]:
+        # OVERRIDE to remove map name (string)
         x_pos = self._read_m(0xD362)
         y_pos = self._read_m(0xD361)
         map_n = self._read_m(0xD35E)
@@ -169,8 +195,13 @@ class PokemonEnvironment(PyboyEnvironment):
             "x": x_pos,
             "y": y_pos,
             "map_id": map_n,
-            "map": pkc.get_map_location(map_n),
         }
+
+    def _get_current_selected_menu_item(self) -> int:
+        return self._read_m(0xCC26)
+
+    def _get_index_current_pokemon(self) -> int:
+        return self._read_m(0xCC2F)
 
     def _get_party_size(self) -> int:
         return self._read_m(0xD163)

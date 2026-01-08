@@ -12,36 +12,100 @@ from abc import ABCMeta
 
 import numpy as np
 from pyboy.utils import WindowEvent
+from functools import cached_property
+from collections import deque
 
 from pyboy_environment.environments.pyboy_environment import PyboyEnvironment
 
+DEFAULT_ACTIONS = [
+    ["up"],
+    ["down"],
+    ["left"],
+    ["right"],
+    ["a"],
+    ["b"],
+    ["left", "a"],
+    ["left", "b"],
+    ["right", "a"],
+    ["right", "b"],
+]
 
 class MarioEnvironment(PyboyEnvironment, metaclass=ABCMeta):
     def __init__(
         self,
         act_freq: int,
-        valid_actions: list[WindowEvent],
-        release_button: list[WindowEvent],
+        action_space: list[list[str]] = DEFAULT_ACTIONS,
+        init_state: str = "init.state",
+        image_observation: bool = False,
+        stack_states: int = 3,
         emulation_speed: int = 0,
         headless: bool = False,
     ) -> None:
+        if image_observation:
+            self._get_state = self._get_image_state
+
+        self.prev_states = deque(maxlen=stack_states)
+        self.prev_action = "None"
 
         super().__init__(
-            task="mario",
             rom_name="SuperMarioLand.gb",
-            init_state_file_name="init.state",
             domain="mario",
+            actions=action_space,
+            init_state_file_name=init_state,
             act_freq=act_freq,
-            valid_actions=valid_actions,
-            release_button=release_button,
             emulation_speed=emulation_speed,
             headless=headless,
         )
 
+
+    def _get_image_state(self) -> np.ndarray:
+        frame = self.game_area()[np.newaxis, ...]
+        self.prev_states.append(frame)
+        return np.concatenate(self.prev_states)
+    
+
     def _get_state(self) -> np.ndarray:
-        # TODO parameter as to whether to flatten this view or not
-        # TODO image based being frame or game area frame...
-        pass
+        vector = self.game_area().flatten()
+        self.prev_states.append(vector)
+        return np.concatenate(self.prev_states)
+    
+
+    def reset(self) -> np.ndarray:
+        self.prev_states.clear()
+        state = super().reset()
+        self.prev_action = "None"
+
+        while len(self.prev_states) < self.prev_states.maxlen:
+            self.prev_states.append(state)
+        state = np.concatenate(self.prev_states)
+        
+        return state
+
+
+    def _run_action_on_emulator(self, action: int | float) -> None:
+        """
+        Mario-specific parsing of action inputs to emulator using `pyboy.button()`
+        
+        :param self
+        :param action: Index of action to perform
+        """
+        pyboy_action_idx = int(action) # Cast outputs of continuous algs to int
+        curr_action = self.actions[pyboy_action_idx]
+
+        # Queue each action button press and press duration in emulator
+        for button in curr_action:
+            self.pyboy.button(button, self.act_freq)
+
+        self.pyboy.tick(self.act_freq - 1, sound=False)
+
+        # Release 'A' one tick early if Mario is on the ground so that next jump can be performed
+        if self._get_mario_on_ground():
+            self.pyboy.send_input(WindowEvent.RELEASE_BUTTON_A)
+
+        self.pyboy.tick(1, sound=False)
+        
+        self.prev_action = curr_action
+
 
     def _generate_game_stats(self) -> dict[str, int]:
         return {
@@ -108,3 +172,33 @@ class MarioEnvironment(PyboyEnvironment, metaclass=ABCMeta):
         mario = self.pyboy.game_wrapper
         mario.game_area_mapping(mario.mapping_compressed, 0)
         return mario.game_area()
+
+    def get_overlay_info(self) -> dict:
+        return {
+            "Action": self.prev_action
+        }
+
+    @cached_property
+    def min_action_value(self) -> float:
+        return 0
+
+    @cached_property
+    def max_action_value(self) -> float:
+        return len(self.actions)
+
+    @cached_property
+    def observation_space(self) -> int | tuple[int]:
+        shape = self._get_state().shape
+        if len(shape) > 1:
+            return shape
+        else:
+            return shape[0]
+
+    @cached_property
+    def action_num(self) -> int:
+        return len(self.actions)
+    
+    def sample_action(self) -> list[int]:
+        length = self.action_num
+        random_index = np.random.randint(0, length)
+        return np.array([random_index])

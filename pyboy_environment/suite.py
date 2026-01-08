@@ -25,7 +25,7 @@ def make(
         elif task == "fight":
             env = PokemonFight(act_freq, emulation_speed, headless)
         elif task == "brock":
-            env = PokemonBrock(act_freq, emulation_speed, headless)
+            env = PokemonBrock(act_freq, emulation_speed, headless, image_observation)
         else:
             raise ValueError(f"Unknown Pokemon task: {task}")
     else:

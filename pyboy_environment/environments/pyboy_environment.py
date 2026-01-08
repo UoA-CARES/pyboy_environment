@@ -2,6 +2,8 @@ from abc import ABCMeta, abstractmethod
 from functools import cached_property
 from pathlib import Path
 
+from typing import Any
+
 import logging
 import cv2
 import numpy as np
@@ -21,30 +23,25 @@ class PyboyEnvironment(metaclass=ABCMeta):
 
     def __init__(
         self,
-        task: str,
         domain: str,
         rom_name: str,
+        actions: list[Any],
         init_state_file_name: str,
         act_freq: int,
-        valid_actions: list,
-        release_button: list,
         emulation_speed: int = 0,
         headless: bool = False,
     ) -> None:
         signal.signal(signal.SIGSEGV, sig_handler)
 
-        self.task = task
         self.domain = domain
 
         path = f"{Path.home()}/cares_rl_configs/{self.domain}"
         self.rom_path = f"{path}/{rom_name}"
         self.init_path = f"{path}/task_init_states/{init_state_file_name}"
 
+        self.actions = actions
+
         self.combo_actions = 0
-
-        self.valid_actions = valid_actions
-
-        self.release_button = release_button
 
         self.act_freq = act_freq
 
@@ -70,11 +67,6 @@ class PyboyEnvironment(metaclass=ABCMeta):
 
         self.reset()
 
-    def sample_action(self) -> list[int]:
-        length = len(self.valid_actions)
-        random_index = np.random.randint(0, length)
-        return np.array([random_index])
-
     def set_seed(self, seed: int) -> None:
         self.seed = seed
         # There isn't a random element to set that I am aware of...
@@ -93,7 +85,7 @@ class PyboyEnvironment(metaclass=ABCMeta):
         return self._get_state()
 
     def grab_frame(self, height: int = 240, width: int = 300) -> np.ndarray:
-        frame = np.array(self.screen.image)
+        frame = self.screen.ndarray
         frame = cv2.resize(frame, (width, height))
         # Convert to BGR for use with OpenCV
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
