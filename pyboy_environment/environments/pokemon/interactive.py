@@ -45,26 +45,26 @@ def manage_state(name: str, dir: os.PathLike, mode: str, env: PyboyEnvironment):
 
 def main(argv: list[str]):
     key_mapping = {
-        "\x1b[A": [[WindowEvent.PRESS_ARROW_UP], "UP"],
-        "8": [[WindowEvent.PRESS_ARROW_UP], "UP"],
-        "\x1b[B": [[WindowEvent.PRESS_ARROW_DOWN], "DOWN"],
-        "2": [[WindowEvent.PRESS_ARROW_DOWN], "DOWN"],
-        "\x1b[C": [[WindowEvent.PRESS_ARROW_RIGHT], "RIGHT"],
-        "6": [[WindowEvent.PRESS_ARROW_RIGHT], "RIGHT"],
-        "\x1b[D": [[WindowEvent.PRESS_ARROW_LEFT], "LEFT"],
-        "4": [[WindowEvent.PRESS_ARROW_LEFT], "LEFT"],
-        "a": [[WindowEvent.PRESS_BUTTON_A], "A"],
-        "5": [[WindowEvent.PRESS_BUTTON_A], "A"],
-        "s": [[WindowEvent.PRESS_BUTTON_B], "B"],
-        "+": [[WindowEvent.PRESS_BUTTON_B], "B"],
-        "\b": [[WindowEvent.PRESS_BUTTON_SELECT], "SELECT"],
-        "\x7f": [[WindowEvent.PRESS_BUTTON_SELECT], "SELECT"],
-        "\r": [[WindowEvent.PRESS_BUTTON_START], "START"],
-        "\n": [[WindowEvent.PRESS_BUTTON_START], "START"],
-        "7": [[WindowEvent.PRESS_ARROW_LEFT, WindowEvent.PRESS_BUTTON_A], "LEFT+A"],
-        "9": [[WindowEvent.PRESS_ARROW_RIGHT, WindowEvent.PRESS_BUTTON_A], "RIGHT+A"],
-        "1": [[WindowEvent.PRESS_ARROW_LEFT, WindowEvent.PRESS_BUTTON_B], "LEFT+B"],
-        "3": [[WindowEvent.PRESS_ARROW_RIGHT, WindowEvent.PRESS_BUTTON_B], "RIGHT+B"],
+        "\x1b[A": ["up"],
+        "8": ["up"],
+        "\x1b[B": ["down"],
+        "2": ["down"],
+        "\x1b[C": ["right"],
+        "6": ["right"],
+        "\x1b[D": ["left"],
+        "4": ["left"],
+        "a": ["a"],
+        "5": ["a"],
+        "s": ["b"],
+        "+": ["b"],
+        "\b": ["select"],
+        "\x7f": ["select"],
+        "\r": ["start"],
+        "\n": ["start"],
+        "7": ["left", "a"],
+        "9": ["right", "a"],
+        "1": ["left", "b"],
+        "3": ["right", "b"],
     }
 
     if len(argv) < 2:
@@ -77,24 +77,24 @@ def main(argv: list[str]):
         os.makedirs(states_dir)
 
     # Set up environment
-    env = Suite.make(argv[0], argv[1], 8, headless=False, emulation_speed=1)
+    env = Suite.make(argv[0], argv[1], 24, headless=False, emulation_speed=1, image_observation=True)
 
     print("\rEnvironment ready, waiting for user input (Press 'q' to quit)...\r")
     while True:
         key = get_action_key()
 
         if key in key_mapping.keys():
-            action_event, action_name = key_mapping[key]
+            action = key_mapping[key]
+            action = action[0]
 
-            if action_event not in env.valid_actions:
+            if action not in env.actions:
                 print(
-                    f"Failed to execute action: {action_name}. Valid PyBoy action received but is not a valid environment action\r"
+                    f"Failed to execute action: {action}. Valid PyBoy action received but is not a valid environment action\r"
                 )
                 continue
 
-            action_index = env.valid_actions.index(action_event)
-            _, reward, _, _, _ = env.step(action_index)
-            print(f"Action: {action_name:5} | Reward: {reward}\r")
+            _, reward, _, _, _ = env.step(env.actions.index(action))
+            print(f"Action: {action} | Reward: {reward}\r")
         elif key in ("x", "z"):
             name = input("Enter name: ")
             mode = "rb" if key == "x" else "wb"

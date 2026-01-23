@@ -16,7 +16,7 @@ class MarioRun(MarioEnvironment):
     ) -> None:
         self.max_level_progress = 0     
 
-        custom_actions = [
+        task_action_space = [
             ["down"],
             ["left"],
             ["right"],
@@ -29,8 +29,8 @@ class MarioRun(MarioEnvironment):
         ]
 
         super().__init__(
-            act_freq=act_freq,
-            action_space=custom_actions,
+            act_freq=8,
+            action_space=task_action_space,
             image_observation=image_observation,
             emulation_speed=emulation_speed,
             headless=headless,
