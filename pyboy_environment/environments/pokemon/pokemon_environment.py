@@ -86,6 +86,7 @@ class PokemonEnvironment(PyboyEnvironment):
     
 
     def _get_state(self) -> np.ndarray:
+        # May be overridden in __init__ by _get_image_state
         game_stats = self._generate_game_stats()
         
         state = []

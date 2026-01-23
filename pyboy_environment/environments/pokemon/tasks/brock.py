@@ -6,13 +6,13 @@ from pyboy_environment.environments.pokemon.pokemon_environment import (
 from pyboy.utils import IntIOWrapper
 
 # Reward Constants
-# Larger value giving to sparser rewards
-# Smaller value giving to more frequently experiened rewards
+# Larger value given to sparser rewards
+# Smaller value given to more frequently experienced rewards
 BASE_REWARD = -0.1
 IN_GRASS_REWARD = 0.1
 START_BATTLE_REWARD = 1
-DEAL_DAMAGE_MULTIPLIER = 0.1
-GAIN_XP_MULTIPLIER = 0.1
+DEAL_DAMAGE_MULTIPLIER = 0.5
+GAIN_XP_MULTIPLIER = 0.5
 LEVEL_UP_MULTIPLIER = 1
 OUT_OF_LAB_REWARD = 0.5
 MOVE_TO_V_CITY_REWARD = 0.8
@@ -24,7 +24,7 @@ TASK_COMPLETION_MULTIPLIER = 1
 MOVE_CLOSER_TO_GYM_REWARD = 0.5
 IN_BATTLE_REWARD = 0
 
-STEPS_TRUNCATION = 500
+STEPS_TRUNCATION = 1000
 TASK_COMPLETION_EXTRA_STEPS = 600
 LEVEL_UP_EXTRA_STEPS_MULTIPLIER = 10
 FIND_BROCK_EXTRA_STEPS = 200
@@ -48,7 +48,7 @@ class PokemonBrock(PokemonEnvironment):
         self.tasks_reached = 0
         self.task_prior_states = [None] * NUM_TASKS
 
-        task_actions = [
+        task_action_space = [
             "up",
             "down",
             "left",
@@ -59,7 +59,7 @@ class PokemonBrock(PokemonEnvironment):
 
         super().__init__(
             act_freq=act_freq,
-            action_space=task_actions,
+            action_space=task_action_space,
             image_observation=image_observation,
             emulation_speed=emulation_speed,
             headless=headless,
@@ -83,7 +83,7 @@ class PokemonBrock(PokemonEnvironment):
     def _select_task(self, game_stats: dict) -> int:
         if game_stats["levels"][0] < 8:
             return 0  # fight
-        elif game_stats["party_size"] < 3 and self._get_num_pokeballs() < 10:
+        elif game_stats["party_size"] < 3 and self._get_pokeball_count() < 10:
             if game_stats["map_id"] != 1 and game_stats["map_id"] != 0x2A:
                 return 1  # enter pokemart village
             elif game_stats["map_id"] == 1:
@@ -144,7 +144,7 @@ class PokemonBrock(PokemonEnvironment):
 
     def _get_state(self) -> np.ndarray:
         state = super()._get_state()
-        state.append(self.tasks)
+        # state = np.hstack((state, self.tasks))
         return state
 
     def step(self, action) -> tuple:
@@ -247,7 +247,7 @@ class PokemonBrock(PokemonEnvironment):
             return 0
 
     def _reward_task_buy_pokeball(self, new_state: dict) -> float:
-        delta_pokeball = new_state["num_pokeballs"] - self._get_num_pokeballs()
+        delta_pokeball = new_state["num_pokeballs"] - self._get_pokeball_count()
         if delta_pokeball > 0:
             return delta_pokeball * PURCHASE_POKEBALL_MULTIPLIER
         return 0
