@@ -29,7 +29,7 @@ TASK_COMPLETION_EXTRA_STEPS = 600
 LEVEL_UP_EXTRA_STEPS_MULTIPLIER = 10
 FIND_BROCK_EXTRA_STEPS = 200
 
-ACTIVE_TASK_INDICATOR = 100
+ACTIVE_TASK_INDICATOR = 1
 
 NUM_TASKS = 8
 
@@ -83,7 +83,7 @@ class PokemonBrock(PokemonEnvironment):
     def _select_task(self, game_stats: dict) -> int:
         if game_stats["levels"][0] < 8:
             return 0  # fight
-        elif game_stats["party_size"] < 3 and self._get_pokeball_count() < 10:
+        elif game_stats["party_size"] < 3 and self._get_num_pokeballs() < 5:
             if game_stats["map_id"] != 1 and game_stats["map_id"] != 0x2A:
                 return 1  # enter pokemart village
             elif game_stats["map_id"] == 1:
@@ -113,6 +113,19 @@ class PokemonBrock(PokemonEnvironment):
         if new_state["battle_type"] != 0:
             return True
         return False
+    
+
+    def _get_num_pokeballs(self) -> int:
+        items = self._read_items()
+        keys = items.keys()
+        num_pokeballs = 0
+
+        for i in range(0x5):
+            key = f"item_{i}"
+            if key in keys:
+                num_pokeballs += items[key]
+
+        return num_pokeballs
 
     ################################################################
     ######################## Training Info #########################
@@ -231,7 +244,7 @@ class PokemonBrock(PokemonEnvironment):
             return -IN_BATTLE_REWARD
 
         if new_state["map_id"] != 0x0C and new_state["map_id"] != 0x00:
-            return -0.1
+            return -0.1 # Penalty for not being on the path to Viridian City or in it
 
         if (new_state["y"] <= self.prior_game_stats["y"] and new_state["map_id"] == 0x0C) or (
             new_state["map_id"] == 0x0C and self.prior_game_stats["map_id"] == 00
@@ -243,11 +256,13 @@ class PokemonBrock(PokemonEnvironment):
     def _reward_task_enter_pokemart(self, new_state: dict) -> float:
         if self.prior_game_stats["map_id"] != 0x2A and new_state["map_id"] == 0x2A:
             return ENTER_POKEMART_REWARD
+        elif self.prior_game_stats["map_id"] == 0x2A and new_state["map_id"] != 0x2A:
+            return -ENTER_POKEMART_REWARD
         else:
             return 0
 
     def _reward_task_buy_pokeball(self, new_state: dict) -> float:
-        delta_pokeball = new_state["num_pokeballs"] - self._get_pokeball_count()
+        delta_pokeball = new_state["num_pokeballs"] - self._get_num_pokeballs()
         if delta_pokeball > 0:
             return delta_pokeball * PURCHASE_POKEBALL_MULTIPLIER
         return 0
