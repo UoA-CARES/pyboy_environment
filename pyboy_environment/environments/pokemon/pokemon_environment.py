@@ -99,7 +99,7 @@ class PokemonEnvironment(PyboyEnvironment):
 
         self.prev_states.append(np.array(state))
 
-        return np.array(state)
+        return np.concatenate(self.prev_states)
 
 
     def _get_image_state(self) -> np.ndarray:
@@ -168,7 +168,7 @@ class PokemonEnvironment(PyboyEnvironment):
             **self._read_party_hp(),
             "enemy_pokemon_health": self._get_enemy_pokemon_health(),
             "party_size": self._get_party_size(),
-            "ids": self._read_party_id(),
+            # "ids": self._read_party_id(),
             "levels": self._read_party_level(),
             "xp": self._read_party_xp(),
             "status": self._read_party_status(),
@@ -176,8 +176,7 @@ class PokemonEnvironment(PyboyEnvironment):
             "caught_pokemon": self._read_caught_pokemon_count(),
             "seen_pokemon": self._read_seen_pokemon_count(),
             "money": self._read_money(),
-            "events": self._read_events(),
-            "items": items,
+            # "events": self._read_events(),
             "in_grass": self._is_in_grass_tile(),
             "num_pokeballs": self._get_pokeball_count(items),
             "current_selected_menu_item": self._get_current_selected_menu_item(),

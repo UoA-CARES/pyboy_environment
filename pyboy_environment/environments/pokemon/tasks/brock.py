@@ -174,7 +174,9 @@ class PokemonBrock(PokemonEnvironment):
 
         self.prior_game_stats = current_game_stats
 
-        return state, reward, done, truncated, {}
+        curr_task = self.prior_game_stats["tasks"].index(ACTIVE_TASK_INDICATOR)
+
+        return state, reward, done, truncated, {"current_task": curr_task}
 
     def _save_task_state(self, task_index: int):
         path = os.path.dirname(self.init_path)
