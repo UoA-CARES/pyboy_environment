@@ -9,18 +9,18 @@ from pyboy.utils import IntIOWrapper
 # Larger value given to sparser rewards
 # Smaller value given to more frequently experienced rewards
 BASE_REWARD = -0.1
-IN_GRASS_REWARD = 0.1
-START_BATTLE_REWARD = 1
+IN_GRASS_REWARD = 0.2
+START_BATTLE_REWARD = 5
 DEAL_DAMAGE_MULTIPLIER = 0.5
 GAIN_XP_MULTIPLIER = 0.5
 LEVEL_UP_MULTIPLIER = 1
-OUT_OF_LAB_REWARD = 0.5
+OUT_OF_LAB_REWARD = 10
 MOVE_TO_V_CITY_REWARD = 0.8
-ENTER_POKEMART_REWARD = 0.5
-PURCHASE_POKEBALL_MULTIPLIER = 0.5
-THROW_POKEBALL_MULTIPLIER = 0.2
-CATCH_POKEMON_REWARD = 0.5
-TASK_COMPLETION_MULTIPLIER = 1
+ENTER_POKEMART_REWARD = 10
+PURCHASE_POKEBALL_MULTIPLIER = 2
+THROW_POKEBALL_REWARD = 10
+CATCH_POKEMON_REWARD = 10
+TASK_COMPLETION_MULTIPLIER = 100
 MOVE_CLOSER_TO_GYM_REWARD = 0.5
 IN_BATTLE_REWARD = 0
 
@@ -270,7 +270,7 @@ class PokemonBrock(PokemonEnvironment):
         return 0
 
     def _reward_task_catch_pokemon(self, new_state: dict, reward) -> float:
-        reward = self._throw_pokeball_reward(new_state, THROW_POKEBALL_MULTIPLIER)
+        reward = self._throw_pokeball_reward(new_state, THROW_POKEBALL_REWARD)
         reward += self._catch_pokemon_reward(
             new_state, CATCH_POKEMON_REWARD, reward > 0
         )
