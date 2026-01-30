@@ -9,11 +9,11 @@ from pyboy.utils import IntIOWrapper
 # Larger value given to sparser rewards
 # Smaller value given to more frequently experienced rewards
 BASE_REWARD = -0.1
-IN_GRASS_REWARD = 0.1
+IN_GRASS_REWARD = 0.09
 START_BATTLE_REWARD = 5
 DEAL_DAMAGE_MULTIPLIER = 0.5
 GAIN_XP_MULTIPLIER = 0.5
-LEVEL_UP_MULTIPLIER = 1
+LEVEL_UP_MULTIPLIER = 5
 OUT_OF_LAB_REWARD = 10
 MOVE_TO_V_CITY_REWARD = 0.8
 ENTER_POKEMART_REWARD = 10
@@ -26,7 +26,7 @@ IN_BATTLE_REWARD = 0
 
 STEPS_TRUNCATION = 1000
 TASK_COMPLETION_EXTRA_STEPS = 600
-LEVEL_UP_EXTRA_STEPS_MULTIPLIER = 10
+LEVEL_UP_EXTRA_STEPS_MULTIPLIER = 100
 FIND_BROCK_EXTRA_STEPS = 200
 
 ACTIVE_TASK_INDICATOR = 1
@@ -212,8 +212,8 @@ class PokemonBrock(PokemonEnvironment):
         old_levels = self.prior_game_stats["levels"]
         for i in range(len(new_levels)):
             if new_levels[i] > old_levels[i]:
-                reward += (new_levels[i] / old_levels[i] - 1) * LEVEL_UP_MULTIPLIER
-                self.steps -= new_levels[i] ** 2 * LEVEL_UP_EXTRA_STEPS_MULTIPLIER
+                reward += ((new_levels[i] + 1) / (old_levels[i] + 1)) * LEVEL_UP_MULTIPLIER
+                self.steps -= new_levels[i] * LEVEL_UP_EXTRA_STEPS_MULTIPLIER
                 # add extra hundred steps after a level up is performed
         return reward
 
