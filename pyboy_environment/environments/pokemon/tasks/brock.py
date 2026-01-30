@@ -9,7 +9,7 @@ from pyboy.utils import IntIOWrapper
 # Larger value given to sparser rewards
 # Smaller value given to more frequently experienced rewards
 BASE_REWARD = -0.1
-IN_GRASS_REWARD = 0.2
+IN_GRASS_REWARD = 0.1
 START_BATTLE_REWARD = 5
 DEAL_DAMAGE_MULTIPLIER = 0.5
 GAIN_XP_MULTIPLIER = 0.5
