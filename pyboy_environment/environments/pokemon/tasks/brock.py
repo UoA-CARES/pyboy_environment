@@ -269,7 +269,7 @@ class PokemonBrock(PokemonEnvironment):
             return delta_pokeball * PURCHASE_POKEBALL_MULTIPLIER
         return 0
 
-    def _reward_task_catch_pokemon(self, new_state: dict, reward) -> float:
+    def _reward_task_catch_pokemon(self, new_state: dict) -> float:
         reward = self._throw_pokeball_reward(new_state, THROW_POKEBALL_REWARD)
         reward += self._catch_pokemon_reward(
             new_state, CATCH_POKEMON_REWARD, reward > 0
