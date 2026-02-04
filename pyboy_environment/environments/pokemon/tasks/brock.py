@@ -271,9 +271,7 @@ class PokemonBrock(PokemonEnvironment):
 
     def _reward_task_catch_pokemon(self, new_state: dict) -> float:
         reward = self._throw_pokeball_reward(new_state, THROW_POKEBALL_REWARD)
-        reward += self._catch_pokemon_reward(
-            new_state, CATCH_POKEMON_REWARD, reward > 0
-        )
+        reward += self._catch_pokemon_reward(new_state, CATCH_POKEMON_REWARD)
         return reward
 
     def _reward_task_find_gym(self, new_state: dict) -> float:

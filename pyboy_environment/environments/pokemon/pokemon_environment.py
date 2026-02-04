@@ -219,7 +219,7 @@ class PokemonEnvironment(PyboyEnvironment):
         # Iterate through the dictionary of items the player (keys) has and their counts (values)
         for itemId, count in items.items():
             # Iterate through the types of Pokeballs. If the item (key) matches any of the Pokeball type ids, add the count to the total number of Pokeballs
-            if itemId in range(0x0, 0x5):
+            if int(itemId) in range(0x0, 0x5):
                 total_count += count
 
         return total_count
@@ -327,7 +327,7 @@ class PokemonEnvironment(PyboyEnvironment):
         for i in range(total_items):
             item_id = self._read_m(addr + 2 * i)
             item_count = self._read_m(addr + 2 * i + 1)
-            items[f"item_{item_id}"] = item_count
+            items[f"{item_id}"] = item_count
 
         return items
 
@@ -401,11 +401,8 @@ class PokemonEnvironment(PyboyEnvironment):
         return 0
 
     def _catch_pokemon_reward(
-        self, new_state: dict[str, any], reward: float = 1, pokeball_thrown: bool = True
+        self, new_state: dict[str, any], reward: float = 1
     ) -> float:
-        if not pokeball_thrown:
-            return 0
-
         previous_count = self.prior_game_stats["party_size"]
         new_count = new_state["party_size"]
 
@@ -460,8 +457,8 @@ class PokemonEnvironment(PyboyEnvironment):
     def _throw_pokeball_reward(
         self, new_state: dict[str, any], reward: float = 1
     ) -> float:
-        previous_count = self._get_pokeball_count(self.prior_game_stats["items"])
-        new_count = self._get_pokeball_count(new_state["items"])
+        previous_count = self.prior_game_stats["num_pokeballs"]
+        new_count = new_state["num_pokeballs"]
 
         if previous_count > new_count:
             return reward
