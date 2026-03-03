@@ -21,7 +21,7 @@ PURCHASE_POKEBALL_MULTIPLIER = 2
 THROW_POKEBALL_REWARD = 10
 CATCH_POKEMON_REWARD = 10
 TASK_COMPLETION_MULTIPLIER = 100
-MOVE_CLOSER_TO_GYM_REWARD = 0.5
+MOVE_CLOSER_TO_GYM_REWARD = 100
 IN_BATTLE_REWARD = 0
 
 STEPS_TRUNCATION = 1000
@@ -293,7 +293,7 @@ class PokemonBrock(PokemonEnvironment):
 
     def _reward_task_fight_brock(self, new_state: dict) -> float:
         reward = 0
-        if new_state["battle_type" == 2]:
+        if new_state["battle_type"] == 2:
             if self.prior_game_stats["battle_type"] == 2:
                 reward += 5
             else:
@@ -334,8 +334,8 @@ class PokemonBrock(PokemonEnvironment):
         # reward for completing a task (is negative for reverting to previous task)
         task_diff = self._get_task_index_diff(new_state)
 
-        if task_diff == 1:
-            self.steps = self.steps - TASK_COMPLETION_EXTRA_STEPS * task
+        if task_diff != 0:
+            self.steps = self.steps - TASK_COMPLETION_EXTRA_STEPS * task * task_diff
             self._save_task_state(task + 1)
 
         return reward + task_diff * TASK_COMPLETION_MULTIPLIER
