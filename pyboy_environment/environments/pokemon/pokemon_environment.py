@@ -82,7 +82,7 @@ class PokemonEnvironment(PyboyEnvironment):
     def sample_action(self) -> list[int]:
         length = self.action_num
         random_index = np.random.randint(0, length)
-        return np.array([random_index])
+        return random_index
     
 
     def _get_state(self) -> np.ndarray:

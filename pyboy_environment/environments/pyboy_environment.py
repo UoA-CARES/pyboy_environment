@@ -52,7 +52,7 @@ class PyboyEnvironment(metaclass=ABCMeta):
             self.rom_path,
             window=head,
             sound_emulated=False,
-            no_input=True,
+            no_input=False,
             title_status=True,
         )
 
